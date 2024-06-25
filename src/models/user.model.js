@@ -21,7 +21,7 @@ const userSchema = new Schema(
     fullName: {
       type: String,
       required: [true, "full name is required"],
-      lowercase: true,
+      // lowercase: true,
       trim: true,
       index: true,
     },
@@ -33,7 +33,10 @@ const userSchema = new Schema(
       type: String, // cloudinary url
     },
     watchHistory: [{ type: Schema.Types.ObjectId, ref: "Video" }],
-    password: { String, required: [true, "Password is Required"] },
+    password: {
+      type: String,
+      required: [true, "Password is Required"],
+    },
     refreshToken: {
       type: String,
     },
@@ -45,12 +48,9 @@ const userSchema = new Schema(
 
 // ++++++ PASSWORD ENCRIPTION +++++
 userSchema.pre("save", async function (next) {
-  if (this.isModified("password")) {
-    this.password = bcryptjs.hash(this.password, 10);
-    next();
-  } else {
-    return next();
-  }
+  if (!this.isModified("password")) return next();
+  this.password = await bcryptjs.hash(this.password, 10);
+  next();
 });
 
 // +++++ PASSWORD CHECKING +++++++

@@ -1,1 +1,1 @@
-export const DB_NAME = "youtube_clone with chai aur code Hitash";
+export const DB_NAME = "CHAI_AUR_BACKEND"; // !!! any space between words not allowed !!!!!!!!
