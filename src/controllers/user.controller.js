@@ -281,4 +281,183 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+// +++++++++ CHANGE CURRENT PASSWORD +++++++++
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword, confirmPassword } = req.body;
+  // console.log("old pass----", oldPassword);
+  // console.log("new pass -----", newPassword);
+  // console.log("conf pass -----", confirmPassword);
+
+  if (newPassword !== confirmPassword) {
+    throw new ApiError(401, "Password doesn't match!");
+  }
+
+  const currentUserId = req.user?._id; // with help of "verifyJwt" middleware , we can get current user info, decoding cookie || header info.
+  // console.log("currentUserId___", currentUserId);
+
+  const currentUser = await User.findById(currentUserId);
+  console.log("currentUser____", currentUser);
+
+  const isHashedPasswordCorrect =
+    await currentUser.isPasswordCorrect(oldPassword); // password checking method() from user.model.js
+
+  if (!isHashedPasswordCorrect) {
+    throw new ApiError(401, "Invalid old password !");
+  }
+
+  currentUser.password = newPassword;
+  await currentUser.save({ validateBeforeSave: true });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed Successfully. "));
+});
+
+// +++++++ GET CURRENT USER +++++++
+const getCurrentUser = asyncHandler(async (req, res) => {
+  const currentUser = req.user;
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, currentUser, "Current User fetched successfully.")
+    );
+});
+
+// +++++++++ UPDATE FULLNAME & EMAIL +++++++++
+const updateUserDetails = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
+  const currentUserId = req.user?._id;
+
+  if (!(fullName && email)) {
+    throw new ApiError(400, "All fields are required ! ");
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    currentUserId,
+    {
+      $set: {
+        fullName,
+        email,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedUser, "User details updated successfully.")
+    );
+});
+
+// ++++++++ UPDATE AVATAR +++++++++
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const updatedAvatarLocalPath = req.file?.path;
+
+  // console.log("updated Avatar Local Path ------", updatedAvatarLocalPath);
+
+  if (!updatedAvatarLocalPath) {
+    throw new ApiError(400, "updated avatar local path missing !");
+  }
+
+  // ++++++ UPDATED FILE UPLOAD ON CLOUDINARY +++++
+  const updatedAvatarCloudinaryResponse = await uploadOnCloudinary(
+    updatedAvatarLocalPath
+  );
+
+  if (!updatedAvatarCloudinaryResponse.url) {
+    throw new ApiError(400, "Updated-avatar upload on cloudinary FAILED !");
+  }
+
+  // console.log(
+  //   "updated_Avatar_Cloudinary_Response ----- ",
+  //   updatedAvatarCloudinaryResponse
+  // );
+
+  const updatedAvatarCloudinaryUrl = updatedAvatarCloudinaryResponse?.url;
+
+  // +++++++ GETTING CURRENT USER-ID BY DECODING TOKEN +++++++
+  const currentUserId = req.user?._id; // coming from auth middleware (verifyJwt) .
+
+  const updatedUser = await User.findByIdAndUpdate(
+    currentUserId,
+    {
+      $set: {
+        avatar: updatedAvatarCloudinaryUrl,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedUser, "User Avatar updated Successfully ")
+    );
+});
+
+// +++++++ UPDATE COVER-IMAGE ++++++++
+const updatedCoverImage = asyncHandler(async (req, res) => {
+  // UPDATED COVER-IMAGE LOCAL FILE PATH
+  const updatedCoverImageLocalPath = req.file?.path;
+  // console.log("updatedCoverImageLocalPath---", updatedCoverImageLocalPath);
+
+  if (!updatedCoverImageLocalPath) {
+    throw new ApiError(400, "Updated cover-image local path not found !");
+  }
+
+  // UPLOAD ON CLOUDINARY
+  const updatedCoverImageCloudinaryResponse = await uploadOnCloudinary(
+    updatedCoverImageLocalPath
+  );
+
+  if (!updatedCoverImageCloudinaryResponse?.url) {
+    throw new ApiError(
+      400,
+      "Error while uploading updated cover image on cloudinary !"
+    );
+  }
+  // COVER-IMAGE URL FROM CLOUDINARY
+  const updatedCoverImageCloudinaryUrl =
+    updatedCoverImageCloudinaryResponse?.url;
+
+  // console.log(
+  //   "updatedCoverImageCloudinaryUrl ----",
+  //   updatedCoverImageCloudinaryUrl
+  // );
+
+  // GETTING CURRENT USER-ID BY DECODING TOKEN USING AUTH MIDDLEWARE (verifyJwt())
+  const currentUserId = req.user?._id;
+
+  const updatedUser = await User.findByIdAndUpdate(
+    currentUserId,
+    {
+      $set: {
+        coverImage: updatedCoverImageCloudinaryUrl,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedUser, "cover-image UPDATED Successfully.")
+    );
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateUserDetails,
+  updateUserAvatar,
+  updatedCoverImage,
+};
