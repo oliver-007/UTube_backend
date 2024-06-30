@@ -27,8 +27,35 @@ const uploadOnCloudinary = async (localFilePath) => {
   } catch (error) {
     fs.unlinkSync(localFilePath);
     // remove locally saved temp file as the upload operation got failed.
+    console.log("File upload on cloudinary FAILED !!!", error?.message);
     return null;
   }
 };
 
-export { uploadOnCloudinary };
+// ++++++++ DELETE IMAGE FILE FROM CLOUDINARY +++++++++
+const deleteFromCloudinary = async (public_id) => {
+  try {
+    if (!public_id) {
+      return null;
+    }
+
+    // DELETE IMG FILE
+    const response = await cloudinary.uploader.destroy(public_id, {
+      resource_type: "image",
+    });
+
+    console.log(
+      " Old img/video file deleted Successfully .  Deletion file response ----",
+      response
+    );
+
+    return response;
+  } catch (error) {
+    console.log(
+      error?.message,
+      "Img file deletion from cloudinary  FAILED !!!"
+    );
+  }
+};
+
+export { uploadOnCloudinary, deleteFromCloudinary };

@@ -1,7 +1,10 @@
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -368,7 +371,10 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   );
 
   if (!updatedAvatarCloudinaryResponse.url) {
-    throw new ApiError(400, "Updated-avatar upload on cloudinary FAILED !");
+    throw new ApiError(
+      400,
+      "Updated-avatar upload on cloudinary FAILED ( url & public_id not found) !"
+    );
   }
 
   // console.log(
@@ -380,6 +386,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   // +++++++ GETTING CURRENT USER-ID BY DECODING TOKEN +++++++
   const currentUserId = req.user?._id; // coming from auth middleware (verifyJwt) .
+  const currentUserPreviousAvatarUrl = req.user?.avatar;
+  // console.log("currentUserPreviousAvatarUrl --", currentUserPreviousAvatarUrl);
 
   const updatedUser = await User.findByIdAndUpdate(
     currentUserId,
@@ -393,6 +401,19 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     }
   ).select("-password -refreshToken");
 
+  // +++++++++ DELETE OLD AVATAR IMG FILE FROM CLOUDINARY AFTER UPDATING AVATAR +++++++++
+
+  // EXTRACT PUBLIC-ID FROM URL
+  const previousAvatarPublicId = currentUserPreviousAvatarUrl
+    .split("/") // Split the URL into an array of path components
+    .pop() // Extract the last element (filename)
+    .split(".")[0]; // Remove the extension
+
+  // console.log("previousAvatarPublicId ----", previousAvatarPublicId);
+
+  // DELETE PREVIOUS AVATAR FROM CLOUDINARY
+  await deleteFromCloudinary(previousAvatarPublicId);
+
   return res
     .status(200)
     .json(
@@ -405,6 +426,13 @@ const updatedCoverImage = asyncHandler(async (req, res) => {
   // UPDATED COVER-IMAGE LOCAL FILE PATH
   const updatedCoverImageLocalPath = req.file?.path;
   // console.log("updatedCoverImageLocalPath---", updatedCoverImageLocalPath);
+
+  // PREVIOUS COVER-IMAGE URL FROM DATABASE
+  const currentUserPreviousCoverImageUrl = req.user?.coverImage;
+  console.log(
+    "currentUserPreviousCoverImageUrl ---- ",
+    currentUserPreviousCoverImageUrl
+  );
 
   if (!updatedCoverImageLocalPath) {
     throw new ApiError(400, "Updated cover-image local path not found !");
@@ -442,6 +470,15 @@ const updatedCoverImage = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password");
+
+  // EXTRACT PUBLIC-ID FROM URL
+  const previousCoverImagePublicId = currentUserPreviousCoverImageUrl
+    .split("/") // Split the url into an array of path.
+    .pop() // Extract the last component (file name)
+    .split(".")[0]; // Remove the extension.
+
+  // DELETE PREVIOUS COVER-IMAGE FROM CLOUDINARY
+  await deleteFromCloudinary(previousCoverImagePublicId);
 
   return res
     .status(200)

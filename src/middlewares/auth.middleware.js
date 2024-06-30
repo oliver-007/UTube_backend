@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
+import fs from "fs";
 
 const verifyJwt = asyncHandler(async (req, _, next) => {
   try {
@@ -10,8 +11,11 @@ const verifyJwt = asyncHandler(async (req, _, next) => {
       req.header("Authorization")?.replace("Bearer ", "");
     // console.log("TOKEN --=-=-=-=-", token);
 
+    const localFilePath = req.file?.path;
+
     if (!token) {
-      throw new ApiError(401, "Unauthorized request !");
+      fs.unlinkSync(localFilePath); // remove locally saved temp file as the upload operation got failed.
+      throw new ApiError(401, "Unauthorized request || Token not found !");
     }
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
@@ -25,7 +29,8 @@ const verifyJwt = asyncHandler(async (req, _, next) => {
     // console.log("user =-=-=", user);
 
     if (!user) {
-      throw new ApiError(401, "Invalid Access Token");
+      fs.unlinkSync(localFilePath); // remove locally saved temp file as the upload operation got failed.
+      throw new ApiError(401, "Invalid Access Token || User not found!");
     }
 
     req.user = user;
