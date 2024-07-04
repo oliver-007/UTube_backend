@@ -46,26 +46,28 @@ router.route("/refresh-token").post(refreshAccessToken);
 router.route("/change-password").post(verifyJwt, changeCurrentPassword);
 
 // ++++++ GET CURRENT USER ROUTE +++++++
-router.route("/current-user").post(verifyJwt, getCurrentUser);
+router.route("/current-user").get(verifyJwt, getCurrentUser);
 
 // ++++++++ UPDATE USER DETAILS ROUTE ++++++++
-router.route("/update-user").post(verifyJwt, updateUserDetails);
+router.route("/update-user").patch(verifyJwt, updateUserDetails);
 
 // ++++++++ UPDATE AVATAR ROUTE ++++++++
-router.route("/update-avatar").post(
-  // MULTER MIDDLEWARE INJECTION
-  upload.single("avatar"),
+router.route("/update-avatar").patch(
   // AUTH MIDDLEWARE INJECTION
   verifyJwt,
+  // MULTER MIDDLEWARE INJECTION
+  upload.single("avatar"),
+
   updateUserAvatar
 );
 
 // ++++++++ UPDATE COVER-IMAGE ROUTE +++++++++
-router.route("/update-cover-image").post(
-  // MULTER MIDDLEWARE INJECTION
-  upload.single("coverImage"),
+router.route("/update-cover-image").patch(
   // AUTH MIDDLEWARE INJECTION
   verifyJwt,
+  // MULTER MIDDLEWARE INJECTION
+  upload.single("coverImage"),
+
   updatedCoverImage
 );
 

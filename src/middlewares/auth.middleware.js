@@ -11,10 +11,7 @@ const verifyJwt = asyncHandler(async (req, _, next) => {
       req.header("Authorization")?.replace("Bearer ", "");
     // console.log("TOKEN --=-=-=-=-", token);
 
-    const localFilePath = req.file?.path;
-
     if (!token) {
-      fs.unlinkSync(localFilePath); // remove locally saved temp file as the upload operation got failed.
       throw new ApiError(401, "Unauthorized request || Token not found !");
     }
 
@@ -29,7 +26,6 @@ const verifyJwt = asyncHandler(async (req, _, next) => {
     // console.log("user =-=-=", user);
 
     if (!user) {
-      fs.unlinkSync(localFilePath); // remove locally saved temp file as the upload operation got failed.
       throw new ApiError(401, "Invalid Access Token || User not found!");
     }
 
