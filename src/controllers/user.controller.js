@@ -110,7 +110,7 @@ const registerUser = asyncHandler(async (req, res) => {
   // ++++ USER CREATION ON DB ++++
   const user = await User.create({
     fullName,
-    avatar: avatar.url,
+    avatar: avatar?.url,
     coverImage: coverImage?.url || "",
     email,
     password,
@@ -571,7 +571,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId.createFromHexString(currentUserId),
+        _id: new mongoose.Types.ObjectId(currentUserId),
       },
     },
     {
@@ -632,4 +632,5 @@ export {
   updateUserAvatar,
   updatedCoverImage,
   getUserChannelProfile,
+  getWatchHistory,
 };

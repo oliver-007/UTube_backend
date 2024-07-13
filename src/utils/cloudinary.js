@@ -8,14 +8,20 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Upload an image
+// ++++++++++++++ UPLOAD IMAGE FILE ON CLOUDINARY +++++++++++++
 const uploadOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
     // upload the file on cloudinary
-    const response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "auto",
-    });
+    const response = await cloudinary.uploader.upload(
+      localFilePath,
+      // OPTIONS ---
+      {
+        resource_type: "auto",
+        use_filename: true,
+        folder: "youtube_clone - backend",
+      }
+    );
     // success message
     console.log(
       " 📸 File has uploaded successfully : upload cloudinary response ---",

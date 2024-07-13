@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   changeCurrentPassword,
   getCurrentUser,
+  getUserChannelProfile,
+  getWatchHistory,
   loginUser,
   logoutUser,
   refreshAccessToken,
@@ -12,6 +14,7 @@ import {
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
+import { videoUpload } from "../controllers/video.controller.js";
 
 const router = Router();
 
@@ -67,8 +70,13 @@ router.route("/update-cover-image").patch(
   verifyJwt,
   // MULTER MIDDLEWARE INJECTION
   upload.single("coverImage"),
-
   updatedCoverImage
 );
+
+// ++++++++ GET CHANNEL PROFILE ROUTE ++++++
+router.route("/channel/:username").get(verifyJwt, getUserChannelProfile);
+
+// +++++++++ GET USER WATCH-HISTORY ROUTE +++++++++
+router.route("/watch-history").get(verifyJwt, getWatchHistory);
 
 export default router;
