@@ -3,7 +3,10 @@ import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 
 // +++++++ VIDEO UPLOAD +++++++
 const videoUpload = asyncHandler(async (req, res) => {
@@ -143,4 +146,82 @@ const getVideoById = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, video[0], "Video fetched by id successfully."));
 });
-export { videoUpload, getAllVideos, getVideoById };
+
+// ++++++++ UPDATE VIDEO DETAILS +++++++
+const updateVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const { title, description } = req.body;
+
+  const videoDetailsBeforeUpdate = await Video.findById(videoId);
+  // console.log("videoDetailsBeforeUpdate ---- ", videoDetailsBeforeUpdate);
+
+  const previousVideoThumbnailUrl = videoDetailsBeforeUpdate?.thumbnail;
+  console.log("previousVideoThumbnailUrl ----", previousVideoThumbnailUrl);
+
+  // EXTRACT PUBLIC ID FROM THUMBNAIL URL
+  const publicIdExtractedFromPreviousUrl = previousVideoThumbnailUrl
+    ?.split("/")
+    .slice(-2)
+    .join("/")
+    .split(".")[0];
+  console.log("splited -=-=-=-=- ", publicIdExtractedFromPreviousUrl);
+
+  if (!(title && description)) {
+    throw new ApiError(400, "Title & Description ara required ! ");
+  }
+
+  // UPDATED THUMBNAIL LOCAL FILE PATH
+  const updatedThumbnailLocalPath = req.file?.path;
+  // console.log("thumbnail----", req.file);
+
+  if (!updatedThumbnailLocalPath) {
+    throw new ApiError(400, " Updated Thumbnail Local file path not found !");
+  }
+
+  // UPLOAD ON CLUDINARY UPDATED THUMBNAIL
+  const updatedThumbnailCloudinaryResponse = await uploadOnCloudinary(
+    updatedThumbnailLocalPath
+  );
+
+  // console.log(
+  //   "updatedThumbnailCloudinaryResponse ----",
+  //   updatedThumbnailCloudinaryResponse
+  // );
+
+  if (!updatedThumbnailCloudinaryResponse.url) {
+    throw new ApiError(
+      400,
+      " Updated-thumbnail upload on cloudinary FAILED ( url & public_id not found) !!! "
+    );
+  }
+
+  const updatedThumbnailCloudinaryUrl = updatedThumbnailCloudinaryResponse?.url;
+
+  // UPDATE METHOD APPLY
+  const updatedVideoDetails = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        title,
+        description,
+        thumbnail: updatedThumbnailCloudinaryUrl,
+      },
+    },
+    { new: true }
+  );
+
+  // DELETE PREVIOUS THUMBNAIL FORM CLOUDINARY CLOUD
+  await deleteFromCloudinary(publicIdExtractedFromPreviousUrl);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        updatedVideoDetails,
+        "Video details updated Successfully ."
+      )
+    );
+});
+
+export { videoUpload, getAllVideos, getVideoById, updateVideo };

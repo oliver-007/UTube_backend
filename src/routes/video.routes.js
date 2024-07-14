@@ -4,6 +4,7 @@ import { upload } from "../middlewares/multer.middleware.js";
 import {
   getAllVideos,
   getVideoById,
+  updateVideo,
   videoUpload,
 } from "../controllers/video.controller.js";
 
@@ -31,6 +32,10 @@ router
   );
 
 // +++++++ SINGLE VIDEO CRUD OPARATION ROUTE +++++++
-router.route("/:videoId").get(getVideoById);
+router.route("/:videoId").get(getVideoById).patch(
+  // MULTER MIDDLEWARE INJECTION
+  upload.single("thumbnail"),
+  updateVideo
+);
 
 export default router;

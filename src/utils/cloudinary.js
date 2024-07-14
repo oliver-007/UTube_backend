@@ -19,7 +19,7 @@ const uploadOnCloudinary = async (localFilePath) => {
       {
         resource_type: "auto",
         use_filename: true,
-        folder: "youtube_clone - backend",
+        folder: "youtube_clone_backend",
       }
     );
     // success message
