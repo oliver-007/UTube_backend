@@ -39,7 +39,7 @@ const uploadOnCloudinary = async (localFilePath) => {
 };
 
 // ++++++++ DELETE IMAGE FILE FROM CLOUDINARY +++++++++
-const deleteFromCloudinary = async (public_id) => {
+const deleteImageFileFromCloudinary = async (public_id) => {
   try {
     if (!public_id) {
       return null;
@@ -50,10 +50,7 @@ const deleteFromCloudinary = async (public_id) => {
       resource_type: "image",
     });
 
-    console.log(
-      " Old img/video file deleted Successfully .  Deletion file response ----",
-      response
-    );
+    console.log("Deletion image file response ----", response);
 
     return response;
   } catch (error) {
@@ -64,4 +61,31 @@ const deleteFromCloudinary = async (public_id) => {
   }
 };
 
-export { uploadOnCloudinary, deleteFromCloudinary };
+// ++++++++++ DELETE VIDEO FILE FROM CLOUDINARY +++++++++++++
+const deleteVideoFileFromCloudinary = async (public_id) => {
+  try {
+    if (!public_id) {
+      return null;
+    }
+
+    // DELETE IMG FILE
+    const response = await cloudinary.uploader.destroy(public_id, {
+      resource_type: "video",
+    });
+
+    console.log("Deletion video file response ----", response);
+
+    return response;
+  } catch (error) {
+    console.log(
+      error?.message,
+      "Video file deletion from cloudinary  FAILED !!!"
+    );
+  }
+};
+
+export {
+  uploadOnCloudinary,
+  deleteImageFileFromCloudinary,
+  deleteVideoFileFromCloudinary,
+};

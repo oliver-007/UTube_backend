@@ -2,7 +2,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 import {
-  deleteFromCloudinary,
+  deleteImageFileFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -406,14 +406,15 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   // EXTRACT PUBLIC-ID FROM URL
   const previousAvatarPublicId = currentUserPreviousAvatarUrl
-    .split("/") // Split the URL into an array of path components
-    .pop() // Extract the last element (filename)
-    .split(".")[0]; // Remove the extension
+    .split("/")
+    .slice(-2)
+    .join("/")
+    .split(".")[0];
 
-  // console.log("previousAvatarPublicId ----", previousAvatarPublicId);
+  console.log("previousAvatarPublicId ----", previousAvatarPublicId);
 
   // DELETE PREVIOUS AVATAR FROM CLOUDINARY
-  await deleteFromCloudinary(previousAvatarPublicId);
+  await deleteImageFileFromCloudinary(previousAvatarPublicId);
 
   return res
     .status(200)
@@ -474,12 +475,15 @@ const updatedCoverImage = asyncHandler(async (req, res) => {
 
   // EXTRACT PUBLIC-ID FROM URL
   const previousCoverImagePublicId = currentUserPreviousCoverImageUrl
-    .split("/") // Split the url into an array of path.
-    .pop() // Extract the last component (file name)
+    .split("/")
+    .slice(-2)
+    .join("/")
     .split(".")[0]; // Remove the extension.
 
+  // console.log("previousCoverImagePublicId -=-=-=-", previousCoverImagePublicId);
+
   // DELETE PREVIOUS COVER-IMAGE FROM CLOUDINARY
-  await deleteFromCloudinary(previousCoverImagePublicId);
+  await deleteImageFileFromCloudinary(previousCoverImagePublicId);
 
   return res
     .status(200)

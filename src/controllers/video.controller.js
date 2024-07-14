@@ -4,7 +4,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
-  deleteFromCloudinary,
+  deleteImageFileFromCloudinary,
+  deleteVideoFileFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 
@@ -156,15 +157,19 @@ const updateVideo = asyncHandler(async (req, res) => {
   // console.log("videoDetailsBeforeUpdate ---- ", videoDetailsBeforeUpdate);
 
   const previousVideoThumbnailUrl = videoDetailsBeforeUpdate?.thumbnail;
-  console.log("previousVideoThumbnailUrl ----", previousVideoThumbnailUrl);
+  // console.log("previousVideoThumbnailUrl ----", previousVideoThumbnailUrl);
+
+  if (!previousVideoThumbnailUrl) {
+    throw new ApiError(400, "Previous video thumbnail url not found !");
+  }
 
   // EXTRACT PUBLIC ID FROM THUMBNAIL URL
-  const publicIdExtractedFromPreviousUrl = previousVideoThumbnailUrl
-    ?.split("/")
+  const previousThumbnailPublicId = previousVideoThumbnailUrl
+    .split("/")
     .slice(-2)
     .join("/")
     .split(".")[0];
-  console.log("splited -=-=-=-=- ", publicIdExtractedFromPreviousUrl);
+  // console.log("splited -=-=-=-=- ", publicIdExtractedFromPreviousUrl);
 
   if (!(title && description)) {
     throw new ApiError(400, "Title & Description ara required ! ");
@@ -211,7 +216,7 @@ const updateVideo = asyncHandler(async (req, res) => {
   );
 
   // DELETE PREVIOUS THUMBNAIL FORM CLOUDINARY CLOUD
-  await deleteFromCloudinary(publicIdExtractedFromPreviousUrl);
+  await deleteImageFileFromCloudinary(previousThumbnailPublicId);
 
   return res
     .status(200)
@@ -224,4 +229,49 @@ const updateVideo = asyncHandler(async (req, res) => {
     );
 });
 
-export { videoUpload, getAllVideos, getVideoById, updateVideo };
+// +++++++++ DELETE VIDEO +++++++++
+const deleteVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  const videoDetailsFromDatabase = await Video.findById(videoId);
+  console.log("videoDetailsFromDatabase =-=-=- ", videoDetailsFromDatabase);
+
+  if (!videoDetailsFromDatabase) {
+    throw new ApiError(400, "Video not found !");
+  }
+
+  const videoFileUrl = videoDetailsFromDatabase.videoFile;
+  const videoThumbnailUrl = videoDetailsFromDatabase.thumbnail;
+
+  // EXTRACT PUBLIC-ID FROM URL
+  const videoFilePublicId = videoFileUrl
+    .split("/")
+    .slice(-2)
+    .join("/")
+    .split(".")[0];
+  const videoThumbnailPublicId = videoThumbnailUrl
+    .split("/")
+    .slice(-2)
+    .join("/")
+    .split(".")[0];
+
+  // DELETE VIDEO FROM DATABASE
+  const deletedVideoResponse = await Video.findByIdAndDelete(videoId);
+  console.log("deletedVideoResponse -- ", deletedVideoResponse);
+
+  if (!deletedVideoResponse) {
+    throw new ApiError(500, "Video Deletion from database FAILED ! ");
+  }
+
+  // DELETE VIDEO & THUMBNAIL FROM CLOUDINARY
+  await deleteVideoFileFromCloudinary(videoFilePublicId);
+  await deleteImageFileFromCloudinary(videoThumbnailPublicId);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, deletedVideoResponse, "Video deleted Successfully ")
+    );
+});
+
+export { videoUpload, getAllVideos, getVideoById, updateVideo, deleteVideo };

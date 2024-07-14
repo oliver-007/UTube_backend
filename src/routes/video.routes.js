@@ -2,6 +2,7 @@ import { Router } from "express";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import {
+  deleteVideo,
   getAllVideos,
   getVideoById,
   updateVideo,
@@ -32,10 +33,14 @@ router
   );
 
 // +++++++ SINGLE VIDEO CRUD OPARATION ROUTE +++++++
-router.route("/:videoId").get(getVideoById).patch(
-  // MULTER MIDDLEWARE INJECTION
-  upload.single("thumbnail"),
-  updateVideo
-);
+router
+  .route("/:videoId")
+  .get(getVideoById)
+  .patch(
+    // MULTER MIDDLEWARE INJECTION
+    upload.single("thumbnail"),
+    updateVideo
+  )
+  .delete(deleteVideo);
 
 export default router;
