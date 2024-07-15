@@ -96,7 +96,52 @@ const videoUpload = asyncHandler(async (req, res) => {
 
 // +++++++++++ GET ALL VIDEOS +++++++++
 const getAllVideos = asyncHandler(async (req, res) => {
-  // todo >>>>>>>>>>>>>>
+  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+
+  console.log("page==", page);
+  console.log("limit ==", limit);
+  console.log("search query  ==", query);
+
+  // AGGREGATION PIPELINE ON VIDEO MODEL INSTEAD OF POPULATE()
+  const allVideos = await Video.aggregate([
+    {
+      $match: {}, // Empty match stage fetches all documents
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: {
+          $first: "$owner",
+        },
+      },
+    },
+  ]);
+
+  console.log("allVideos =-=-=-=-", allVideos);
+
+  if (!allVideos.length > 0) {
+    throw new ApiError(400, "No video found !!!");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, allVideos, "All videos fetched Successfully"));
 });
 
 // ++++++++ GET VIDEO BY ID ++++++++
