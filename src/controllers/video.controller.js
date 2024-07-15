@@ -4,8 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
-  deleteImageFileFromCloudinary,
-  deleteVideoFileFromCloudinary,
+  deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 
@@ -264,8 +263,8 @@ const deleteVideo = asyncHandler(async (req, res) => {
   }
 
   // DELETE VIDEO & THUMBNAIL FROM CLOUDINARY
-  await deleteVideoFileFromCloudinary(videoFilePublicId);
-  await deleteImageFileFromCloudinary(videoThumbnailPublicId);
+  await deleteFromCloudinary(videoFilePublicId, "video");
+  await deleteFromCloudinary(videoThumbnailPublicId, "image");
 
   return res
     .status(200)
@@ -274,4 +273,54 @@ const deleteVideo = asyncHandler(async (req, res) => {
     );
 });
 
-export { videoUpload, getAllVideos, getVideoById, updateVideo, deleteVideo };
+// ++++++++ VIDEO PUBLISH TOGGLE +++++++
+const togglePublishStatus = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  const videoDetails = await Video.findById(videoId);
+  // console.log("videoDetails =-=-=-=-", videoDetails);
+
+  if (!videoDetails) {
+    throw new ApiError(400, "Video not found !");
+  }
+
+  const publishStatusToggled = !videoDetails.isPublished;
+
+  // console.log("publishStatusToggled =-=-=-=- ", publishStatusToggled);
+
+  const updatedVideoPublishStatus = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        isPublished: publishStatusToggled,
+      },
+    },
+    { new: true }
+  );
+
+  // console.log(
+  //   "video publish status update response --0-0======-",
+  //   updatedVideoPublishStatus.isPublished
+  // );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        updatedVideoPublishStatus.isPublished,
+        updatedVideoPublishStatus.isPublished
+          ? "Video Published "
+          : "Video Unpublished"
+      )
+    );
+});
+
+export {
+  videoUpload,
+  getAllVideos,
+  getVideoById,
+  updateVideo,
+  deleteVideo,
+  togglePublishStatus,
+};

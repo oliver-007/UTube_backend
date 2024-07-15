@@ -2,7 +2,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 import {
-  deleteImageFileFromCloudinary,
+  deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -414,7 +414,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   console.log("previousAvatarPublicId ----", previousAvatarPublicId);
 
   // DELETE PREVIOUS AVATAR FROM CLOUDINARY
-  await deleteImageFileFromCloudinary(previousAvatarPublicId);
+  await deleteFromCloudinary(previousAvatarPublicId, "image");
 
   return res
     .status(200)
@@ -483,7 +483,7 @@ const updatedCoverImage = asyncHandler(async (req, res) => {
   // console.log("previousCoverImagePublicId -=-=-=-", previousCoverImagePublicId);
 
   // DELETE PREVIOUS COVER-IMAGE FROM CLOUDINARY
-  await deleteImageFileFromCloudinary(previousCoverImagePublicId);
+  await deleteFromCloudinary(previousCoverImagePublicId, "image");
 
   return res
     .status(200)

@@ -5,6 +5,7 @@ import {
   deleteVideo,
   getAllVideos,
   getVideoById,
+  togglePublishStatus,
   updateVideo,
   videoUpload,
 } from "../controllers/video.controller.js";
@@ -42,5 +43,8 @@ router
     updateVideo
   )
   .delete(deleteVideo);
+
+// ++++++++ VIDEO PUBLISH TOGGLE ROUTE ++++++++
+router.route("/publish/toggle/:videoId").patch(togglePublishStatus);
 
 export default router;
