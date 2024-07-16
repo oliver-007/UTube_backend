@@ -1,5 +1,6 @@
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.model.js";
+import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -62,8 +63,12 @@ const videoUpload = asyncHandler(async (req, res) => {
   //   videoFileCloudinaryResponse?.url
   // );
   // console.log(
-  //   "videoFileCloudinaryResponse duration- ---- ",
-  //   videoFileCloudinaryResponse?.duration
+  //   "videoFileCloudinaryResponse - ---- ",
+  //   videoFileCloudinaryResponse
+  // );
+  // console.log(
+  //   "thumbnailCloudinaryResponse =-=-=- ",
+  //   thumbnailCloudinaryResponse
   // );
   // console.log(
   //   "thumbnail_CloudinaryUrl -----",
@@ -73,7 +78,9 @@ const videoUpload = asyncHandler(async (req, res) => {
   // +++++++++ VIDEO FILE & THUMBNAIL & DETAILS UPLOAD ON DATABASE ++++++++++
   const video = await Video.create({
     videoFile: videoFileCloudinaryResponse?.url,
+    video_public_id: videoFileCloudinaryResponse?.public_id,
     thumbnail: thumbnailCloudinaryResponse?.url,
+    thumbnail_public_id: thumbnailCloudinaryResponse?.public_id,
     title,
     description,
     duration: videoFileCloudinaryResponse?.duration,
@@ -98,9 +105,9 @@ const videoUpload = asyncHandler(async (req, res) => {
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
 
-  console.log("page==", page);
-  console.log("limit ==", limit);
-  console.log("search query  ==", query);
+  // console.log("page==", page);
+  // console.log("limit ==", limit);
+  // console.log("search query  ==", query);
 
   // AGGREGATION PIPELINE ON VIDEO MODEL INSTEAD OF POPULATE()
   const allVideos = await Video.aggregate([
@@ -133,7 +140,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log("allVideos =-=-=-=-", allVideos);
+  // console.log("allVideos =-=-=-=-", allVideos);
 
   if (!allVideos.length > 0) {
     throw new ApiError(400, "No video found !!!");
@@ -147,6 +154,10 @@ const getAllVideos = asyncHandler(async (req, res) => {
 // ++++++++ GET VIDEO BY ID ++++++++
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video id.");
+  }
 
   const isVideoExists = await Video.findById(videoId);
 
@@ -187,6 +198,34 @@ const getVideoById = asyncHandler(async (req, res) => {
     },
   ]);
 
+  // INCREMENT VIEWS OF VIDEOS
+  const currentUser = req.user;
+
+  if (!currentUser.watchHistory.includes(videoId)) {
+    await Video.findByIdAndUpdate(
+      videoId,
+      {
+        $inc: {
+          views: 1,
+        },
+      },
+      { new: true }
+    );
+  }
+
+  // PUT VIDEO_ID IN USER'S WATCH_HISTORY ARRAY
+  await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $addToSet: {
+        watchHistory: videoId,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
   return res
     .status(200)
     .json(new ApiResponse(200, video[0], "Video fetched by id successfully."));
@@ -197,23 +236,24 @@ const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const { title, description } = req.body;
 
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video id !");
+  }
+
   const videoDetailsBeforeUpdate = await Video.findById(videoId);
   // console.log("videoDetailsBeforeUpdate ---- ", videoDetailsBeforeUpdate);
 
-  const previousVideoThumbnailUrl = videoDetailsBeforeUpdate?.thumbnail;
-  // console.log("previousVideoThumbnailUrl ----", previousVideoThumbnailUrl);
+  const previousVideoThumbnailPublicId =
+    videoDetailsBeforeUpdate?.thumbnail_public_id;
 
-  if (!previousVideoThumbnailUrl) {
-    throw new ApiError(400, "Previous video thumbnail url not found !");
+  // console.log(
+  //   "previousVideoThumbnailPublicId ----",
+  //   previousVideoThumbnailPublicId
+  // );
+
+  if (!previousVideoThumbnailPublicId) {
+    throw new ApiError(400, "Previous video thumbnail public_id not found !");
   }
-
-  // EXTRACT PUBLIC ID FROM THUMBNAIL URL
-  const previousThumbnailPublicId = previousVideoThumbnailUrl
-    .split("/")
-    .slice(-2)
-    .join("/")
-    .split(".")[0];
-  // console.log("splited -=-=-=-=- ", publicIdExtractedFromPreviousUrl);
 
   if (!(title && description)) {
     throw new ApiError(400, "Title & Description ara required ! ");
@@ -260,7 +300,7 @@ const updateVideo = asyncHandler(async (req, res) => {
   );
 
   // DELETE PREVIOUS THUMBNAIL FORM CLOUDINARY CLOUD
-  await deleteImageFileFromCloudinary(previousThumbnailPublicId);
+  await deleteFromCloudinary(previousVideoThumbnailPublicId);
 
   return res
     .status(200)
@@ -277,31 +317,23 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video Id !");
+  }
+
   const videoDetailsFromDatabase = await Video.findById(videoId);
-  console.log("videoDetailsFromDatabase =-=-=- ", videoDetailsFromDatabase);
+  // console.log("videoDetailsFromDatabase =-=-=- ", videoDetailsFromDatabase);
 
   if (!videoDetailsFromDatabase) {
     throw new ApiError(400, "Video not found !");
   }
 
-  const videoFileUrl = videoDetailsFromDatabase.videoFile;
-  const videoThumbnailUrl = videoDetailsFromDatabase.thumbnail;
-
-  // EXTRACT PUBLIC-ID FROM URL
-  const videoFilePublicId = videoFileUrl
-    .split("/")
-    .slice(-2)
-    .join("/")
-    .split(".")[0];
-  const videoThumbnailPublicId = videoThumbnailUrl
-    .split("/")
-    .slice(-2)
-    .join("/")
-    .split(".")[0];
+  const videoFilePublicId = videoDetailsFromDatabase.video_public_id;
+  const videoThumbnailPublicId = videoDetailsFromDatabase.thumbnail_public_id;
 
   // DELETE VIDEO FROM DATABASE
   const deletedVideoResponse = await Video.findByIdAndDelete(videoId);
-  console.log("deletedVideoResponse -- ", deletedVideoResponse);
+  // console.log("deletedVideoResponse -- ", deletedVideoResponse);
 
   if (!deletedVideoResponse) {
     throw new ApiError(500, "Video Deletion from database FAILED ! ");
@@ -321,6 +353,10 @@ const deleteVideo = asyncHandler(async (req, res) => {
 // ++++++++ VIDEO PUBLISH TOGGLE +++++++
 const togglePublishStatus = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid Video Id !");
+  }
 
   const videoDetails = await Video.findById(videoId);
   // console.log("videoDetails =-=-=-=-", videoDetails);

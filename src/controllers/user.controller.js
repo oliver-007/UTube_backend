@@ -111,7 +111,9 @@ const registerUser = asyncHandler(async (req, res) => {
   const user = await User.create({
     fullName,
     avatar: avatar?.url,
+    avatar_public_id: avatar?.public_id,
     coverImage: coverImage?.url || "",
+    coverImage_public_id: coverImage?.public_id || "",
     email,
     password,
     username: username.toLowerCase(),
@@ -387,8 +389,11 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   // +++++++ GETTING CURRENT USER-ID BY DECODING TOKEN +++++++
   const currentUserId = req.user?._id; // coming from auth middleware (verifyJwt) .
-  const currentUserPreviousAvatarUrl = req.user?.avatar;
-  // console.log("currentUserPreviousAvatarUrl --", currentUserPreviousAvatarUrl);
+  const currentUserPreviousAvatarPublicId = req.user?.avatar_public_id;
+  // console.log(
+  //   "currentUserPreviousAvatar public id =-=-=- --",
+  //   currentUserPreviousAvatarPublicId
+  // );
 
   const updatedUser = await User.findByIdAndUpdate(
     currentUserId,
@@ -402,19 +407,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     }
   ).select("-password -refreshToken");
 
-  // +++++++++ DELETE OLD AVATAR IMG FILE FROM CLOUDINARY AFTER UPDATING AVATAR +++++++++
-
-  // EXTRACT PUBLIC-ID FROM URL
-  const previousAvatarPublicId = currentUserPreviousAvatarUrl
-    .split("/")
-    .slice(-2)
-    .join("/")
-    .split(".")[0];
-
-  console.log("previousAvatarPublicId ----", previousAvatarPublicId);
-
-  // DELETE PREVIOUS AVATAR FROM CLOUDINARY
-  await deleteFromCloudinary(previousAvatarPublicId, "image");
+  // DELETE PREVIOUS AVATAR FROM CLOUDINARY AFTER UPDATING AVATAR
+  await deleteFromCloudinary(currentUserPreviousAvatarPublicId, "image");
 
   return res
     .status(200)
@@ -430,11 +424,11 @@ const updatedCoverImage = asyncHandler(async (req, res) => {
   // console.log("updatedCoverImageLocalPath---", updatedCoverImageLocalPath);
 
   // PREVIOUS COVER-IMAGE URL FROM DATABASE
-  const currentUserPreviousCoverImageUrl = req.user?.coverImage;
-  console.log(
-    "currentUserPreviousCoverImageUrl ---- ",
-    currentUserPreviousCoverImageUrl
-  );
+  const currentUserPreviousCoverImagePublicId = req.user?.coverImage_public_id;
+  // console.log(
+  //   "currentUserPreviousCoverImagePublicId ---- ",
+  //   currentUserPreviousCoverImagePublicId
+  // );
 
   if (!updatedCoverImageLocalPath) {
     throw new ApiError(400, "Updated cover-image local path not found !");
@@ -473,17 +467,8 @@ const updatedCoverImage = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password");
 
-  // EXTRACT PUBLIC-ID FROM URL
-  const previousCoverImagePublicId = currentUserPreviousCoverImageUrl
-    .split("/")
-    .slice(-2)
-    .join("/")
-    .split(".")[0]; // Remove the extension.
-
-  // console.log("previousCoverImagePublicId -=-=-=-", previousCoverImagePublicId);
-
   // DELETE PREVIOUS COVER-IMAGE FROM CLOUDINARY
-  await deleteFromCloudinary(previousCoverImagePublicId, "image");
+  await deleteFromCloudinary(currentUserPreviousCoverImagePublicId, "image");
 
   return res
     .status(200)

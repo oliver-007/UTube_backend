@@ -24,6 +24,7 @@ app.use(cookieParser());
 // ROUTES IMPORT
 import userRouter from "./routes/user.routes.js";
 import videoRouter from "./routes/video.routes.js";
+import subscriptionRouter from "./routes/subscription.routes.js";
 
 //++++++++++++ ROUTES DECLARATION +++++++++++++
 // +++++ USER ROUTE ++++++++
@@ -31,5 +32,8 @@ app.use("/api/v1/users", userRouter);
 
 // ++++++++ VIDEO ROUTE ++++++++
 app.use("/api/v1/videos", videoRouter);
+
+// ++++++ SUBSCRIPTION ROUTE +++++++
+app.use("/api/v1/subscriptions", subscriptionRouter);
 
 export { app };

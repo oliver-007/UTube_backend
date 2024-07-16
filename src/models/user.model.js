@@ -29,8 +29,17 @@ const userSchema = new Schema(
       type: String, // cloudinary url
       required: [true, "avatar is required"],
     },
+    avatar_public_id: {
+      // FROM CLOUDINARY
+      type: String,
+      required: true,
+    },
     coverImage: {
       type: String, // cloudinary url
+    },
+    coverImage_public_id: {
+      // FROM CLOUDINARY
+      type: String,
     },
     watchHistory: [{ type: Schema.Types.ObjectId, ref: "Video" }],
     password: {
