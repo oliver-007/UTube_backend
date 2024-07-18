@@ -1,16 +1,22 @@
 import { Router } from "express";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
-import { toggelSubscription } from "../controllers/subscription.controller.js";
+import {
+  getChannelSubscriberCount,
+  getSubscribedChannelListByUser,
+  toggelSubscription,
+} from "../controllers/subscription.controller.js";
 
 const router = Router();
 
 router.use(verifyJwt); // USER AUTHENTICATION WILL APPLY FOR ALL ROUTES.
 
+// GET CHANNEL SUBSCRIBERS COUNT & TOGGLE SUBSCRIPTION ROUTE
 router
   .route("/c/:channelId")
-  // .get(getUserChannelSubscribers)
+  .get(getChannelSubscriberCount)
   .post(toggelSubscription);
 
-// router.route("/u/:subscriberId").get(getSubscribedChannels);
+// GET SUBSCRIBED CHANNELS BY CURRENT LOGGED-IN USER ROUTE
+router.route("/u/:userId").get(getSubscribedChannelListByUser);
 
 export default router;
