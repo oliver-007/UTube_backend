@@ -54,6 +54,7 @@ const toggelSubscription = asyncHandler(async (req, res) => {
 });
 
 // +++++ GET CHANNEL SUBSCRIBERS COUNT ++++++
+// controller to return subscriber-count of a channel
 const getChannelSubscriberCount = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
 
@@ -96,6 +97,7 @@ const getChannelSubscriberCount = asyncHandler(async (req, res) => {
 });
 
 // +++++++ GET SUBSCRIBED CHANNELS BY CURRENT-USER +++++++
+// controller to return channel list to which user has subscribed
 const getSubscribedChannelListByUser = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
   console.log("currentUserId =-=-=-  ", currentUserId);
