@@ -107,7 +107,43 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
 // ++++++ REMOVE VIDEO FROM PLAYLIST +++++++
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
-  // >>>>>>>>> To Do >>>>>>>>>>>>
+  const { videoId, playlistId } = req.params;
+
+  if (!(isValidObjectId(videoId) || isValidObjectId(playlistId))) {
+    throw new ApiError(400, "Invalid video or playlist id !!!");
+  }
+
+  const videoExist = await Video.findById(videoId);
+  if (!videoExist) {
+    throw new ApiError(400, "Video not found !!!");
+  }
+
+  const playlistExist = await Playlist.findById(playlistId);
+  if (!playlistExist) {
+    throw new ApiError(400, "Playlist not found !!!");
+  }
+
+  const updatedPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $pull: {
+        videoList: videoId,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        updatedPlaylist,
+        "Video removed from playlist Successfully. "
+      )
+    );
 });
 
 // +++++++ GET USER'S ALL PLAYLIST ++++++++
@@ -117,9 +153,24 @@ const getUserAllPlaylists = asyncHandler(async (req, res) => {
   if (!isValidObjectId(userId)) {
     throw new ApiError(400, "Invalid User Id !!!");
   }
-
+  // >>>>>>>>>> TODO >>>>>> MODIFICATION >>>>>>>>>>>>
   const allPlaylists = await Playlist.find({ owner: userId });
   console.log("allPlaylists -=-=-=- ", allPlaylists);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        allPlaylists,
+        "Fetched user's all playlists Successfully"
+      )
+    );
 });
 
-export { createPlaylist, addVideoToPlaylist, getUserAllPlaylists };
+export {
+  createPlaylist,
+  addVideoToPlaylist,
+  removeVideoFromPlaylist,
+  getUserAllPlaylists,
+};
