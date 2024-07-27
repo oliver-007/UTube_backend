@@ -5,6 +5,7 @@ import {
   createPlaylist,
   getUserAllPlaylists,
   removeVideoFromPlaylist,
+  updatePlaylist,
 } from "../controllers/playlist.controller.js";
 const router = Router();
 
@@ -12,6 +13,9 @@ router.use(verifyJwt); // USER AUTHENTICATION WILL APPLY FOR ALL ROUTES.
 
 // +++++ CREATE PLAYLIST ROUTE +++++
 router.route("/").post(createPlaylist);
+
+// ++++++ UPDATE PLAYLIST NAME & DETAILS ROUTE +++++++
+router.route("/:playlistId").patch(updatePlaylist);
 
 // +++++++++ GET ANY USER'S ALL PLAYLISTS ROUTE ++++++++++
 router.route("/u/:userId").get(getUserAllPlaylists);

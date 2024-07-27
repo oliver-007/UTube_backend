@@ -54,6 +54,58 @@ const createPlaylist = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, playlist, "Playlist created Successfully"));
 });
 
+// +++++++ UPDATE PLAYLIST NAME & DETAILS +++++++++
+const updatePlaylist = asyncHandler(async (req, res) => {
+  const currentUserId = req.user?._id;
+
+  const { name, description } = req.body;
+  if ([name, description].some((field) => field?.trim() === "")) {
+    throw new ApiError(400, "Name or Description shouldn't be empty !!!");
+  }
+
+  const { playlistId } = req.params;
+  if (!isValidObjectId(playlistId)) {
+    throw new ApiError(400, "Invalid playlist Id !!!");
+  }
+
+  const playlistExist = await Playlist.findById(playlistId);
+
+  if (!playlistExist) {
+    throw new ApiError(400, "Playlist not found !!!");
+  }
+
+  // UPDATE NAME & DESCRIPTION VERIFIYING OWNER
+  if (!playlistExist?.owner.equals(currentUserId)) {
+    // While comparing 2 different objectIds in mongoose, must use "equals()" method. Direct comparison using == or === won't work as expected because ObjectIds are complex objects.
+    throw new ApiError(
+      400,
+      "Unauthorized , You are not authorized to edit this playlist !!!"
+    );
+  } else {
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
+      playlistId,
+      {
+        $set: {
+          name,
+          description,
+        },
+      },
+      {
+        new: true,
+      }
+    );
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          updatedPlaylist,
+          "Playlist Name & Description updated Successfully ."
+        )
+      );
+  }
+});
+
 // +++++++ ADD VIDEO TO PLAYLIST +++++++
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
   const { videoId, playlistId } = req.params;
@@ -170,7 +222,11 @@ const getUserAllPlaylists = asyncHandler(async (req, res) => {
 
 export {
   createPlaylist,
+  updatePlaylist,
   addVideoToPlaylist,
   removeVideoFromPlaylist,
   getUserAllPlaylists,
 };
+
+// >>>>>> ToDo >>>>>>>
+// - in add & remove video form videoList controller , have to check whether current user is the owner of the following playlist or not
