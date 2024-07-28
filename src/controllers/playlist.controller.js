@@ -108,6 +108,8 @@ const updatePlaylist = asyncHandler(async (req, res) => {
 
 // +++++++ ADD VIDEO TO PLAYLIST +++++++
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
+  const currentUserId = req.user?._id;
+
   const { videoId, playlistId } = req.params;
 
   if (!(isValidObjectId(videoId) || isValidObjectId(playlistId))) {
@@ -131,34 +133,42 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Playlist not found !!!");
   }
 
-  //   console.log("playlistExist =-=-=-  ", playlistExist);
-
-  // UPDATE PLAYLIST
-  const updatedPlaylist = await Playlist.findByIdAndUpdate(
-    playlistId,
-    {
-      $addToSet: {
-        videoList: videoId,
-      },
-    },
-    {
-      new: true,
-    }
-  );
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        updatedPlaylist,
-        "Video added to playlist Successfully."
-      )
+  // UPDATE VIDEOLIST BY ADDING VIDEO BY VERIFIYING OWNER
+  if (!playlistExist?.owner.equals(currentUserId)) {
+    // While comparing 2 different objectIds in mongoose, must use "equals()" method. Direct comparison using == or === won't work as expected because ObjectIds are complex objects.
+    throw new ApiError(
+      400,
+      "Unauthorized , You are not authorized to edit this playlist !!!"
     );
+  } else {
+    // UPDATE VIDEOLIST FIELD OF PLAYLIST
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
+      playlistId,
+      {
+        $addToSet: {
+          videoList: videoId,
+        },
+      },
+      {
+        new: true,
+      }
+    );
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          updatedPlaylist,
+          "Video added to playlist Successfully."
+        )
+      );
+  }
 });
 
 // ++++++ REMOVE VIDEO FROM PLAYLIST +++++++
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
+  const currentUserId = req.user?._id;
   const { videoId, playlistId } = req.params;
 
   if (!(isValidObjectId(videoId) || isValidObjectId(playlistId))) {
@@ -175,27 +185,36 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Playlist not found !!!");
   }
 
-  const updatedPlaylist = await Playlist.findByIdAndUpdate(
-    playlistId,
-    {
-      $pull: {
-        videoList: videoId,
-      },
-    },
-    {
-      new: true,
-    }
-  );
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        updatedPlaylist,
-        "Video removed from playlist Successfully. "
-      )
+  // UPDATE VIDEOLIST BY REMOVING VIDEO BY VERIFIYING OWNER
+  if (!playlistExist?.owner.equals(currentUserId)) {
+    // While comparing 2 different objectIds in mongoose, must use "equals()" method. Direct comparison using == or === won't work as expected because ObjectIds are complex objects.
+    throw new ApiError(
+      400,
+      "Unauthorized, Your are not authorized to edit playlist !!!"
     );
+  } else {
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
+      playlistId,
+      {
+        $pull: {
+          videoList: videoId,
+        },
+      },
+      {
+        new: true,
+      }
+    );
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          updatedPlaylist,
+          "Video removed from playlist Successfully. "
+        )
+      );
+  }
 });
 
 // +++++++ GET USER'S ALL PLAYLIST ++++++++
@@ -227,6 +246,3 @@ export {
   removeVideoFromPlaylist,
   getUserAllPlaylists,
 };
-
-// >>>>>> ToDo >>>>>>>
-// - in add & remove video form videoList controller , have to check whether current user is the owner of the following playlist or not
