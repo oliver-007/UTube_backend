@@ -106,6 +106,39 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   }
 });
 
+// ++++++++ DELETE PLAYLIST +++++++
+const deletePlaylist = asyncHandler(async (req, res) => {
+  const currentUserId = req.user?._id;
+
+  const { playlistId } = req.params;
+  if (!isValidObjectId(playlistId)) {
+    throw new ApiError(400, "Invalid Playlist Id !!!");
+  }
+
+  if (!playlistId) {
+    throw new ApiError(400, "Playlist Id missing !!!");
+  }
+
+  // DELETE PLAYLIST BY VERIFIYING OWNER
+  const playlistExist = await Playlist.findById(playlistId);
+
+  if (!playlistExist?.owner.equals(currentUserId)) {
+    // While comparing 2 different objectIds in mongoose, must use "equals()" method. Direct comparison using == or === won't work as expected because ObjectIds are complex objects.
+    throw new ApiError(
+      400,
+      "Unauthorized !!! You are not allowed to delete this playlist !!!"
+    );
+  } else {
+    const deletedPlaylist = await Playlist.findByIdAndDelete(playlistId);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, deletedPlaylist, "Playlist deleted Successfully .")
+      );
+  }
+});
+
 // +++++++ ADD VIDEO TO PLAYLIST +++++++
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
@@ -217,23 +250,98 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
   }
 });
 
-// +++++++ GET USER'S ALL PLAYLIST ++++++++
-const getUserAllPlaylists = asyncHandler(async (req, res) => {
+// +++++++ GET ANY USER'S ALL PLAYLIST ++++++++
+const getAnyUsersAllPlaylist = asyncHandler(async (req, res) => {
   const { userId } = req.params;
 
   if (!isValidObjectId(userId)) {
     throw new ApiError(400, "Invalid User Id !!!");
   }
-  // >>>>>>>>>> TODO >>>>>> MODIFICATION >>>>>>>>>>>>
-  const allPlaylists = await Playlist.find({ owner: userId });
-  console.log("allPlaylists -=-=-=- ", allPlaylists);
+
+  const allPlaylist = await Playlist.aggregate([
+    {
+      $match: {
+        owner: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    // FOR OWNER OF PLAYLIST
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+              coverImage: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: {
+          $first: "$owner",
+        },
+      },
+    },
+    // FOR VIDEOS OF PLAYLIST
+    {
+      $lookup: {
+        from: "videos",
+        localField: "videoList",
+        foreignField: "_id",
+        as: "videoList",
+        pipeline: [
+          {
+            $project: {
+              video_public_id: 0,
+              thumbnail_public_id: 0,
+              isPublished: 0,
+            },
+          },
+          // FOR OWNER OF VIDEOS
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    fullName: 1,
+                    avatar: 1,
+                    coverImage: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        allPlaylists,
+        allPlaylist,
         "Fetched user's all playlists Successfully"
       )
     );
@@ -242,7 +350,8 @@ const getUserAllPlaylists = asyncHandler(async (req, res) => {
 export {
   createPlaylist,
   updatePlaylist,
+  deletePlaylist,
   addVideoToPlaylist,
   removeVideoFromPlaylist,
-  getUserAllPlaylists,
+  getAnyUsersAllPlaylist,
 };
