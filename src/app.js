@@ -26,6 +26,7 @@ import userRouter from "./routes/user.routes.js";
 import videoRouter from "./routes/video.routes.js";
 import subscriptionRouter from "./routes/subscription.routes.js";
 import playlistRouter from "./routes/playList.routes.js";
+import commentRouter from "./routes/comment.routes.js";
 
 //++++++++++++ ROUTES DECLARATION +++++++++++++
 // +++++ USER ROUTE ++++++++
@@ -39,5 +40,8 @@ app.use("/api/v1/subscriptions", subscriptionRouter);
 
 // ++++++ PLAYLIST ROUTE ++++++
 app.use("/api/v1/playlists", playlistRouter);
+
+// ++++++++ COMMENT ROUTE ++++++++
+app.use("/api/v1/comments", commentRouter);
 
 export { app };
