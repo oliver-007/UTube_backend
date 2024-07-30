@@ -1,11 +1,19 @@
 import { Router } from "express";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
-import { addComment } from "../controllers/comment.controller.js";
+import {
+  addComment,
+  deleteComment,
+  getAllCommentsOfAnyVideo,
+} from "../controllers/comment.controller.js";
 
 const router = Router();
 
 router.use(verifyJwt); // apply "verifyJwt" middleware to all routes in this file
 
-router.route("/:videoId").post(addComment);
+// ++++++++++ ADD COMMENT + GET ALL COMMENTS ON VIDEO ROUTE +++++++++
+router.route("/:videoId").post(addComment).get(getAllCommentsOfAnyVideo);
+
+// ++++++++ DELETE COMMENT ++++++++
+router.route("/:commentId").delete(deleteComment);
 
 export default router;
