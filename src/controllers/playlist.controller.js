@@ -8,13 +8,11 @@ import { Video } from "../models/video.model.js";
 // +++++++++ CREATE PLAYLIST +++++++++
 const createPlaylist = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
-
-  // USER ID VERIFICATION
-  if (!currentUserId) {
-    throw new ApiError(400, "User not found !!!");
-  }
-
   const { name, description } = req.body;
+
+  if (!(name || description)) {
+    throw new ApiError(400, "Name & Description required !!!");
+  }
 
   // EMPTY FIELD VERIFICATION
   if (
@@ -59,11 +57,19 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
 
   const { name, description } = req.body;
+  if (!(name || description)) {
+    throw new ApiError(400, "Name & Description required !!!");
+  }
+
   if ([name, description].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "Name or Description shouldn't be empty !!!");
   }
 
   const { playlistId } = req.params;
+  if (!playlistId) {
+    throw new ApiError(400, "Playlist id required !!!");
+  }
+
   if (!isValidObjectId(playlistId)) {
     throw new ApiError(400, "Invalid playlist Id !!!");
   }
@@ -111,12 +117,12 @@ const deletePlaylist = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
 
   const { playlistId } = req.params;
-  if (!isValidObjectId(playlistId)) {
-    throw new ApiError(400, "Invalid Playlist Id !!!");
+  if (!playlistId) {
+    throw new ApiError(400, "Playlist id required !!!");
   }
 
-  if (!playlistId) {
-    throw new ApiError(400, "Playlist Id missing !!!");
+  if (!isValidObjectId(playlistId)) {
+    throw new ApiError(400, "Invalid Playlist Id !!!");
   }
 
   // DELETE PLAYLIST BY VERIFIYING OWNER
@@ -208,6 +214,10 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid video or playlist id !!!");
   }
 
+  if (!(videoId || playlistId)) {
+    throw new ApiError(400, "Video id or Playlist Id required !!!");
+  }
+
   const videoExist = await Video.findById(videoId);
   if (!videoExist) {
     throw new ApiError(400, "Video not found !!!");
@@ -253,6 +263,9 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 // +++++++ GET ANY USER'S ALL PLAYLIST ++++++++
 const getAnyUsersAllPlaylist = asyncHandler(async (req, res) => {
   const { userId } = req.params;
+  if (!userId) {
+    throw new ApiError(400, "User id required !!!");
+  }
 
   if (!isValidObjectId(userId)) {
     throw new ApiError(400, "Invalid User Id !!!");

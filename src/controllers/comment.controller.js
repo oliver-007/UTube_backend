@@ -17,6 +17,10 @@ const addComment = asyncHandler(async (req, res) => {
 
   const { videoId } = req.params;
 
+  if (!videoId) {
+    throw new ApiError(400, "Video id required !!! ");
+  }
+
   if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid video id !!!   ");
   }
@@ -37,10 +41,60 @@ const addComment = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, newComment, "Comment added Successfully ."));
 });
 
+// ++++++++ UPDATE COMMENT +++++++
+const updateComment = asyncHandler(async (req, res) => {
+  const currentUserId = req.user?._id;
+
+  const { content } = req.body;
+  if (!content) {
+    throw new ApiError(400, "Comment shouldn't be empty !!!");
+  }
+
+  const { commentId } = req.params;
+  if (!commentId) {
+    throw new ApiError(400, "Comment Id required !!!");
+  }
+  if (!isValidObjectId(commentId)) {
+    throw new ApiError(400, "Invalid comment Id !!!");
+  }
+
+  const commentExist = await Comment.findById(commentId);
+  if (!commentExist) {
+    throw new ApiError(400, "Comment not found !!!");
+  }
+
+  if (!commentExist?.owner.equals(currentUserId)) {
+    throw new ApiError(
+      400,
+      "Unauthorized ! You are not allowed to edit this comment !!!"
+    );
+  } else {
+    const updatedComment = await Comment.findByIdAndUpdate(
+      commentId,
+      {
+        content,
+      },
+      {
+        new: true,
+      }
+    );
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, updatedComment, "Comment updated Successfully .")
+      );
+  }
+});
+
 // ++++++++ DELETE COMMENT +++++++
 const deleteComment = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
   const { commentId } = req.params;
+
+  if (!commentId) {
+    throw new ApiError(400, "Comment id required !!!");
+  }
 
   if (!isValidObjectId(commentId)) {
     throw new ApiError(400, "Invalid Comment Id !!!");
@@ -68,6 +122,11 @@ const deleteComment = asyncHandler(async (req, res) => {
 // ++++++++ GET ALL COMMENTS OF ANY VIDEO +++++++++
 const getAllCommentsOfAnyVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+
+  if (!videoId) {
+    throw new ApiError(400, "Video id required !!!");
+  }
+
   if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid Video Id !!!");
   }
@@ -146,4 +205,4 @@ const getAllCommentsOfAnyVideo = asyncHandler(async (req, res) => {
     );
 });
 
-export { addComment, deleteComment, getAllCommentsOfAnyVideo };
+export { addComment, updateComment, deleteComment, getAllCommentsOfAnyVideo };
