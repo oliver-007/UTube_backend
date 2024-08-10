@@ -14,7 +14,7 @@ router.use(verifyJwt); // apply "verifyJwt" middleware to all routes in this fil
 // ++++++++++ ADD COMMENT + GET ALL COMMENTS ON VIDEO ROUTE +++++++++
 router.route("/:videoId").post(addComment).get(getAllCommentsOfAnyVideo);
 
-// ++++++++ DELETE COMMENT ++++++++
+// ++++++++ DELETE + UPDATE COMMENT ++++++++
 router.route("/:commentId").delete(deleteComment).patch(updateComment);
 
 export default router;
