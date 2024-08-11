@@ -1,4 +1,4 @@
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { Video } from "../models/video.model.js";
@@ -102,4 +102,77 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
       )
     );
 });
-export { toggleVideoLike, toggleCommentLike };
+
+// +++++++++ GET CURENT USER'S ALL LIKED VIDEO +++++++++
+const getUsersAllLikedVideos = asyncHandler(async (req, res) => {
+  const currentUserId = req.user?._id;
+
+  const allLikedVideos = await Like.aggregate([
+    {
+      $match: {
+        likedBy: new mongoose.Types.ObjectId(currentUserId),
+        video: {
+          $exists: true,
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "video",
+        foreignField: "_id",
+        as: "video",
+        pipeline: [
+          {
+            $project: {
+              videoFile: 1,
+              thumbnail: 1,
+              title: 1,
+              description: 1,
+              duration: 1,
+              views: 1,
+              owner: 1,
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    fullName: 1,
+                    avatar: 1,
+                    coverImage: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        allLikedVideos,
+        "User's all liked videos fetched Successfully."
+      )
+    );
+});
+
+export { toggleVideoLike, toggleCommentLike, getUsersAllLikedVideos };
