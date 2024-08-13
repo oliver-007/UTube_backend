@@ -4,6 +4,7 @@ import { upload } from "../middlewares/multer.middleware.js";
 import {
   deleteVideo,
   getAllVideos,
+  getAllVideosOfAUser,
   getVideoById,
   togglePublishStatus,
   updateVideo,
@@ -12,26 +13,29 @@ import {
 
 const router = Router();
 
-router.use(verifyJwt); // Apply verifyJwt middleware to all routes in this file
+// ++++++ GET ALL USER'S ALL VIDEOS WITH || WITHOUT LOGIN ++++++
+router.route("/").get(getAllVideos);
 
-// ++++++++ VIDEO UPLOAD || GET ALL VIDEO ROUTE +++++++++
-router
-  .route("/")
-  .get(getAllVideos)
-  .post(
-    // MULTER MIDDLEWARE INJECTION
-    upload.fields([
-      {
-        name: "videoFile",
-        maxCount: 1,
-      },
-      {
-        name: "thumbnail",
-        maxCount: 1,
-      },
-    ]),
-    videoUpload
-  );
+// +++++++++ GET ALL VIDEOS OF A USER, ROUTE +++++++++
+router.route("/:userId").get(getAllVideosOfAUser);
+
+router.use(verifyJwt); // Apply verifyJwt middleware to the following routes bellow in this file
+
+// ++++++++ VIDEO UPLOAD ROUTE +++++++++
+router.route("/").post(
+  // MULTER MIDDLEWARE INJECTION
+  upload.fields([
+    {
+      name: "videoFile",
+      maxCount: 1,
+    },
+    {
+      name: "thumbnail",
+      maxCount: 1,
+    },
+  ]),
+  videoUpload
+);
 
 // +++++++ SINGLE VIDEO CRUD OPARATION ROUTE +++++++
 router

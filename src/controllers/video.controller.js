@@ -8,6 +8,7 @@ import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
+import { pagination } from "../utils/pagination.js";
 
 // +++++++ VIDEO UPLOAD +++++++
 const videoUpload = asyncHandler(async (req, res) => {
@@ -15,7 +16,7 @@ const videoUpload = asyncHandler(async (req, res) => {
 
   // CURRENT USER DETAILS
   const currentUser = req.user;
-  console.log("currentUser --- ", currentUser);
+  // console.log("currentUser --- ", currentUser);
 
   if (!(title && description)) {
     throw new ApiError(400, "Title & Description are required !");
@@ -101,18 +102,23 @@ const videoUpload = asyncHandler(async (req, res) => {
     );
 });
 
-// +++++++++++ GET ALL VIDEOS +++++++++
+// +++++++++++ GET ALL VIDEOS OF ALL USERS +++++++++
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
-
-  // console.log("page==", page);
-  // console.log("limit ==", limit);
-  // console.log("search query  ==", query);
+  const { page, limit, query, sortBy, sortType, userId } = req.query;
+  const totalVideos = await Video.countDocuments({ isPublished: true });
+  const { parsedLimitForPerPage, skip, totalPages } = await pagination(
+    page,
+    limit,
+    totalVideos
+  );
 
   // AGGREGATION PIPELINE ON VIDEO MODEL INSTEAD OF POPULATE()
-  const allVideos = await Video.aggregate([
+  const allVideosAggregateWithPagination = await Video.aggregate([
     {
-      $match: {}, // Empty match stage fetches all documents
+      $match: {
+        isPublished: true,
+      },
+      // Empty match stage fetches all documents
     },
     {
       $lookup: {
@@ -138,17 +144,108 @@ const getAllVideos = asyncHandler(async (req, res) => {
         },
       },
     },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: parsedLimitForPerPage,
+    },
   ]);
 
   // console.log("allVideos =-=-=-=-", allVideos);
 
-  if (!allVideos.length > 0) {
+  if (!allVideosAggregateWithPagination.length > 0) {
     throw new ApiError(400, "No video found !!!");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, allVideos, "All videos fetched Successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { allVideosAggregateWithPagination, totalPages, totalVideos },
+        "All videos fetched Successfully"
+      )
+    );
+});
+
+// ++++++++++ GET ALL VIDEOS OF A SPECIFIC USER ++++++++
+const getAllVideosOfAUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    throw new ApiError(400, "User id required !!!");
+  }
+
+  if (!isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid user id !!!");
+  }
+
+  // PAGINATION
+  const { page, limit } = req.query;
+  const totalVideos = await Video.countDocuments({
+    owner: userId,
+    isPublished: true,
+  });
+  const { parsedLimitForPerPage, skip, totalPages } = await pagination(
+    page,
+    limit,
+    totalVideos
+  );
+
+  const allVideosOfAUserAggregateWithPagination = await Video.aggregate([
+    {
+      $match: {
+        owner: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: {
+          $first: "$owner",
+        },
+      },
+    },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: parsedLimitForPerPage,
+    },
+  ]);
+
+  if (!allVideosOfAUserAggregateWithPagination.length > 0) {
+    throw new ApiError(400, "No video found !!!");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        allVideosOfAUserAggregateWithPagination,
+        totalPages,
+        totalVideos,
+      },
+      "All videos of this user fetched successfully . "
+    )
+  );
 });
 
 // ++++++++ GET VIDEO BY ID ++++++++
@@ -352,44 +449,45 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 // ++++++++ VIDEO PUBLISH TOGGLE +++++++
 const togglePublishStatus = asyncHandler(async (req, res) => {
+  const currentUserId = req.user?._id;
   const { videoId } = req.params;
 
   if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid Video Id !");
   }
 
-  const videoDetails = await Video.findById(videoId);
-  // console.log("videoDetails =-=-=-=-", videoDetails);
+  const videoExist = await Video.findById(videoId);
 
-  if (!videoDetails) {
+  if (!videoExist) {
     throw new ApiError(400, "Video not found !");
   }
 
-  const publishStatusToggled = !videoDetails.isPublished;
+  // VIDEO OWNER VERIFICATION
+  let updatedVideoPublishStatus;
+  if (!videoExist?.owner.equals(currentUserId)) {
+    throw new ApiError(
+      400,
+      "You are not authorized to perform this action !!!"
+    );
+  } else {
+    const publishStatusToggled = !videoExist.isPublished;
 
-  // console.log("publishStatusToggled =-=-=-=- ", publishStatusToggled);
-
-  const updatedVideoPublishStatus = await Video.findByIdAndUpdate(
-    videoId,
-    {
-      $set: {
-        isPublished: publishStatusToggled,
+    updatedVideoPublishStatus = await Video.findByIdAndUpdate(
+      videoId,
+      {
+        $set: {
+          isPublished: publishStatusToggled,
+        },
       },
-    },
-    { new: true }
-  );
-
-  // console.log(
-  //   "video publish status update response --0-0======-",
-  //   updatedVideoPublishStatus.isPublished
-  // );
+      { new: true }
+    );
+  }
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        updatedVideoPublishStatus.isPublished,
         updatedVideoPublishStatus.isPublished
           ? "Video Published "
           : "Video Unpublished"
@@ -400,6 +498,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 export {
   videoUpload,
   getAllVideos,
+  getAllVideosOfAUser,
   getVideoById,
   updateVideo,
   deleteVideo,

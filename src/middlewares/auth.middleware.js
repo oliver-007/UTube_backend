@@ -11,7 +11,10 @@ const verifyJwt = asyncHandler(async (req, _, next) => {
     // console.log("TOKEN --=-=-=-=-", token);
 
     if (!token) {
-      throw new ApiError(401, "Unauthorized request || Token not found !");
+      throw new ApiError(
+        401,
+        "Unauthorized request || Token not found ! You must login first. "
+      );
     }
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
