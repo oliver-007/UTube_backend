@@ -4,7 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { Comment } from "../models/comment.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Video } from "../models/video.model.js";
-import { pagination } from "../utils/Pagination.js";
+import { pagination } from "../utils/pagination.js";
 
 // +++++++ ADD COMMENT ++++++
 const addComment = asyncHandler(async (req, res) => {
