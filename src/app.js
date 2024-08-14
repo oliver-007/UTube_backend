@@ -28,10 +28,19 @@ import subscriptionRouter from "./routes/subscription.routes.js";
 import playlistRouter from "./routes/playList.routes.js";
 import commentRouter from "./routes/comment.routes.js";
 import likeRouter from "./routes/like.routes.js";
+import { asyncHandler } from "./utils/asyncHandler.js";
+import { ApiResponse } from "./utils/ApiResponse.js";
 
 //++++++++++++ ROUTES DECLARATION +++++++++++++
 // ++++++ WELCOME ROUTE +++++++
-app.get("# Welcome to YoutTube_Backend #");
+app.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, " Welcome to YoutTube_Backend 💝 "));
+  })
+);
 
 // +++++ USER ROUTE ++++++++
 app.use("/api/v1/users", userRouter);
