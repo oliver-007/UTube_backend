@@ -30,6 +30,9 @@ import commentRouter from "./routes/comment.routes.js";
 import likeRouter from "./routes/like.routes.js";
 
 //++++++++++++ ROUTES DECLARATION +++++++++++++
+// ++++++ WELCOME ROUTE +++++++
+app.get("# Welcome to YoutTube_Backend #");
+
 // +++++ USER ROUTE ++++++++
 app.use("/api/v1/users", userRouter);
 
