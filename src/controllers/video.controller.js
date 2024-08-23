@@ -152,7 +152,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     },
   ]);
 
-  // console.log("allVideos =-=-=-=-", allVideos);
+  // console.log("allVideos =-=-=-=-", allVideosAggregateWithPagination);
 
   if (!allVideosAggregateWithPagination.length > 0) {
     throw new ApiError(400, "No video found !!!");
@@ -248,9 +248,10 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
   );
 });
 
-// ++++++++ GET VIDEO BY ID ++++++++
+// ++++++++ GET VIDEO BY VIDEO ID TO WATCH ++++++++
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+  const currentUser = req.user;
 
   if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid video id.");
@@ -296,32 +297,32 @@ const getVideoById = asyncHandler(async (req, res) => {
   ]);
 
   // INCREMENT VIEWS OF VIDEOS
-  const currentUser = req.user;
+  if (req.user) {
+    if (!currentUser.watchHistory.includes(videoId)) {
+      await Video.findByIdAndUpdate(
+        videoId,
+        {
+          $inc: {
+            views: 1,
+          },
+        },
+        { new: true }
+      );
+    }
 
-  if (!currentUser.watchHistory.includes(videoId)) {
-    await Video.findByIdAndUpdate(
-      videoId,
+    // PUT VIDEO_ID IN USER'S WATCH_HISTORY ARRAY
+    await User.findByIdAndUpdate(
+      req.user?._id,
       {
-        $inc: {
-          views: 1,
+        $addToSet: {
+          watchHistory: videoId,
         },
       },
-      { new: true }
+      {
+        new: true,
+      }
     );
   }
-
-  // PUT VIDEO_ID IN USER'S WATCH_HISTORY ARRAY
-  await User.findByIdAndUpdate(
-    req.user?._id,
-    {
-      $addToSet: {
-        watchHistory: videoId,
-      },
-    },
-    {
-      new: true,
-    }
-  );
 
   return res
     .status(200)

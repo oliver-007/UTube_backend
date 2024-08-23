@@ -17,7 +17,10 @@ const router = Router();
 router.route("/").get(getAllVideos);
 
 // +++++++++ GET ALL VIDEOS OF A USER, ROUTE +++++++++
-router.route("/:userId").get(getAllVideosOfAUser);
+router.route("/uid/:userId").get(getAllVideosOfAUser);
+
+// ++++++++++ GET SINGLE VIDEO BY ID ++++++++++
+router.route("/vid/:videoId").get(getVideoById);
 
 router.use(verifyJwt); // Apply verifyJwt middleware to the following routes bellow in this file
 
@@ -37,10 +40,9 @@ router.route("/").post(
   videoUpload
 );
 
-// +++++++ SINGLE VIDEO CRUD OPARATION ROUTE +++++++
+// +++++++ SINGLE VIDEO EDIT, DELETE OPARATION ROUTE +++++++
 router
   .route("/:videoId")
-  .get(getVideoById)
   .patch(
     // MULTER MIDDLEWARE INJECTION
     upload.single("thumbnail"),
