@@ -46,7 +46,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // +++ USER PAYLOAD ++++
   const { username, email, fullName, password } = req.body;
-  // console.log("email : ", email);
+  // console.log("username  =-=: ", username);
 
   // ++++ REQUIRED FILEDS NOT EMPTY VALIDATION +++++
   if (
@@ -116,7 +116,7 @@ const registerUser = asyncHandler(async (req, res) => {
     coverImage_public_id: coverImage?.public_id || "",
     email,
     password,
-    username: username.toLowerCase(),
+    username,
   });
 
   //  ++++++ REMOVE "PASSWORD" & "REFRESH-TOKEN" FIELD FROM RESPONSE ++++
