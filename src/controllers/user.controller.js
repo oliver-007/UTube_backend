@@ -178,7 +178,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
   // ++++ LOGGEDIN USER INFO +++++
   const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
+    "-password -refreshToken -watchHistory -updatedAt -createdAt -coverImage_public_id -avatar_public_id"
   );
 
   // ++++++ SENDING COOKIE ++++++
