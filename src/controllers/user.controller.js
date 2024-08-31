@@ -184,8 +184,8 @@ const loginUser = asyncHandler(async (req, res) => {
   // ++++++ SENDING COOKIE ++++++
   const options = {
     httpOnly: true,
-    // secure: true, // for https
-    secure: false, // for http
+    secure: true, // for https
+    // secure: false, // for http. development phase
   };
 
   return res
