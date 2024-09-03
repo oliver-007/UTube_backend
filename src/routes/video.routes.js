@@ -17,7 +17,8 @@ const router = Router();
 router.route("/").get(getAllVideos);
 
 // +++++++++ GET ALL VIDEOS OF A USER, ROUTE +++++++++
-router.route("/uid/:userId").get(getAllVideosOfAUser);
+// router.route("/uid/:userId").get(getAllVideosOfAUser);
+router.route("/user").get(getAllVideosOfAUser);
 
 // ++++++++++ GET SINGLE VIDEO BY ID ++++++++++
 router.route("/vid/:videoId").get(getVideoById);

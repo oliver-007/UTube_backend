@@ -171,20 +171,23 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 // ++++++++++ GET ALL VIDEOS OF A SPECIFIC USER ++++++++
 const getAllVideosOfAUser = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
+  const { uId, page, limit } = req.query;
+  // console.log("uid -=-=-=- ", uId);
+  // console.log("page -=-=-=- ", page);
+  // console.log("limit -=-=-=- ", limit);
 
-  if (!userId) {
+  if (!uId) {
     throw new ApiError(400, "User id required !!!");
   }
 
-  if (!isValidObjectId(userId)) {
+  if (!isValidObjectId(uId)) {
     throw new ApiError(400, "Invalid user id !!!");
   }
 
   // PAGINATION
-  const { page, limit } = req.query;
+
   const totalVideos = await Video.countDocuments({
-    owner: userId,
+    owner: uId,
     isPublished: true,
   });
   const { parsedLimitForPerPage, skip, totalPages } = await pagination(
@@ -196,7 +199,7 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
   const allVideosOfAUserAggregateWithPagination = await Video.aggregate([
     {
       $match: {
-        owner: new mongoose.Types.ObjectId(userId),
+        owner: new mongoose.Types.ObjectId(uId),
       },
     },
     {
@@ -231,10 +234,6 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
     },
   ]);
 
-  if (!allVideosOfAUserAggregateWithPagination.length > 0) {
-    throw new ApiError(400, "No video found !!!");
-  }
-
   return res.status(200).json(
     new ApiResponse(
       200,
@@ -243,7 +242,7 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
         totalPages,
         totalVideos,
       },
-      "All videos of this user fetched successfully . "
+      `${allVideosOfAUserAggregateWithPagination.length > 0 ? "Videos of this user fetched successfully ." : "No Video Found !!!"}`
     )
   );
 });
