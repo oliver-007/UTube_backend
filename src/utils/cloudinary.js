@@ -23,10 +23,10 @@ const uploadOnCloudinary = async (localFilePath) => {
       }
     );
     // success message
-    console.log(
-      " 📸 File has uploaded successfully : upload cloudinary response ---",
-      response
-    );
+    // console.log(
+    //   " 📸 File has uploaded successfully : upload cloudinary response ---",
+    //   response
+    // );
 
     fs.unlinkSync(localFilePath); // remove locally saved temp file as the upload operation got failed.
     return response;
@@ -50,7 +50,7 @@ const deleteFromCloudinary = async (public_id, resource_type) => {
       resource_type, // resource_type : "image" || "video" || "raw" . Default: "image"
     });
 
-    console.log("Deletion file response ----", response);
+    // console.log("Deletion file response ----", response);
 
     return response;
   } catch (error) {
