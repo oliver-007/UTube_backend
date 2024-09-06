@@ -231,6 +231,9 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
     {
       $limit: parsedLimitForPerPage,
     },
+    {
+      $sort: { createdAt: -1 },
+    },
   ]);
 
   return res.status(200).json(
