@@ -171,7 +171,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 // ++++++++++ GET ALL VIDEOS OF A SPECIFIC USER ++++++++
 const getAllVideosOfAUser = asyncHandler(async (req, res) => {
-  const { uId, page, limit } = req.query;
+  const { uId, page } = req.query;
   // console.log("uid -=-=-=- ", uId);
   // console.log("page -=-=-=- ", page);
   // console.log("limit -=-=-=- ", limit);
@@ -192,7 +192,6 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
   });
   const { parsedLimitForPerPage, skip, totalPages } = await pagination(
     page,
-    limit,
     totalVideos
   );
 
