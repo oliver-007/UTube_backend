@@ -20,7 +20,7 @@ router.route("/").get(getAllVideos);
 router.route("/user").get(getAllVideosOfAUser);
 
 // ++++++++++ GET SINGLE VIDEO BY ID ++++++++++
-router.route("/vid/:videoId").get(getVideoById);
+router.route("/vid").get(getVideoById);
 
 router.use(verifyJwt); // Apply verifyJwt middleware to the following routes bellow in this file
 

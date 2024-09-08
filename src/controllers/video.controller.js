@@ -154,9 +154,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
   // console.log("allVideos =-=-=-=-", allVideosAggregateWithPagination);
 
-  if (!allVideosAggregateWithPagination.length > 0) {
-    throw new ApiError(400, "No video found !!!");
-  }
+  // if (!allVideosAggregateWithPagination.length > 0) {
+  //   throw new ApiError(400, "No video found !!!");
+  // }
 
   return res
     .status(200)
@@ -164,7 +164,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         { allVideosAggregateWithPagination, totalPages, totalVideos },
-        "All videos fetched Successfully"
+        `${allVideosAggregateWithPagination.length > 0 ? "All videos fetched Successfully." : "No Video Found !!!"}`
       )
     );
 });
@@ -251,14 +251,16 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
 
 // ++++++++ GET VIDEO BY VIDEO ID TO WATCH ++++++++
 const getVideoById = asyncHandler(async (req, res) => {
-  const { videoId } = req.params;
-  const currentUser = req.user;
+  const { vId, uId } = req.query;
 
-  if (!isValidObjectId(videoId)) {
+  console.log("vId ----", vId);
+  console.log("uId ----", uId);
+
+  if (!isValidObjectId(vId)) {
     throw new ApiError(400, "Invalid video id.");
   }
 
-  const isVideoExists = await Video.findById(videoId);
+  const isVideoExists = await Video.findById(vId);
 
   if (!isVideoExists) {
     throw new ApiError(400, "Vidoe not found!  ");
@@ -267,7 +269,7 @@ const getVideoById = asyncHandler(async (req, res) => {
   const video = await Video.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId(videoId),
+        _id: new mongoose.Types.ObjectId(vId),
       },
     },
     {
@@ -298,10 +300,16 @@ const getVideoById = asyncHandler(async (req, res) => {
   ]);
 
   // INCREMENT VIEWS OF VIDEOS
-  if (req.user) {
-    if (!currentUser.watchHistory.includes(videoId)) {
+  if (isValidObjectId(uId)) {
+    // without isValidObjectId() , null value gives error.
+    const currentUser = await User.findById(uId).select(
+      "-password -avatar_public_id -coverImage_public_id -refreshToken"
+    );
+    console.log("currentUser =-=-=", currentUser);
+
+    if (!currentUser.watchHistory.includes(vId)) {
       await Video.findByIdAndUpdate(
-        videoId,
+        vId,
         {
           $inc: {
             views: 1,
@@ -313,10 +321,11 @@ const getVideoById = asyncHandler(async (req, res) => {
 
     // PUT VIDEO_ID IN USER'S WATCH_HISTORY ARRAY
     await User.findByIdAndUpdate(
-      req.user?._id,
+      uId,
+
       {
         $addToSet: {
-          watchHistory: videoId,
+          watchHistory: vId,
         },
       },
       {
