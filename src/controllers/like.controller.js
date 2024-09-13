@@ -6,15 +6,43 @@ import { Like } from "../models/like.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Comment } from "../models/comment.model.js";
 
-// +++++++++ GET VIDEO LIKE COUNT ++++++++++
+// +++++++++ GET VIDEO LIKE COUNT WITHOUT SIGN-IN OR WITHOUT LIKING VIDEO ++++++++++
 const getVideoTotalLike = asyncHandler(async (req, res) => {
-  const { videoId } = req.params;
+  const { vId, uId } = req.query;
+
+  if (!isValidObjectId(vId)) {
+    throw new ApiError(400, "Invalid video Id !!!");
+  }
+
+  const videoExist = await Video.findById(vId);
+
+  if (!videoExist) {
+    throw new ApiError(400, "Video not found !!!");
+  }
+
+  let videoLikeStatus;
+  let totalLike;
+
+  if (isValidObjectId(uId)) {
+    // WITHOUT isValidObjectId() IT'LL SHOW ERROR
+    const isVideoLiked = await Like.findOne({
+      likedBy: uId,
+      video: vId,
+    });
+
+    // +++++CHECKING WHETHER CURRENT USER ALREADY LIKED OR NOT ++++
+    if (isVideoLiked) {
+      videoLikeStatus = { isVideoLiked: true };
+    } else {
+      videoLikeStatus = { isVideoLiked: false };
+    }
+  }
 
   // FIND OUT LIKE COUNT OF A SPECIFIC VIDEO, USING VIDEO-ID, FROM LIKE DOCUMENT USING AGGREGATION PIPELINE
   const likeCountResult = await Like.aggregate([
     {
       $match: {
-        video: new mongoose.Types.ObjectId(videoId),
+        video: new mongoose.Types.ObjectId(vId),
       },
     },
     {
@@ -22,7 +50,7 @@ const getVideoTotalLike = asyncHandler(async (req, res) => {
     },
   ]);
 
-  const totalLike =
+  totalLike =
     // In case no documents are found.
     likeCountResult.length > 0 ? likeCountResult[0].likeCount : 0;
 
@@ -31,8 +59,8 @@ const getVideoTotalLike = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        totalLike,
-        "Total like count of this video fetched successfully."
+        { videoLikeStatus, totalLike },
+        "Total like count & like status of this video fetched successfully."
       )
     );
 });
@@ -58,7 +86,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
   // TOGGLE VIDEO LIKE
   let videoLikeStatus;
-
+  let totalLike;
   try {
     if (!isVideoLiked) {
       await Like.create({
@@ -71,6 +99,22 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
       await Like.findByIdAndDelete(isVideoLiked?._id);
       videoLikeStatus = { isVideoLiked: false };
     }
+
+    // FIND OUT LIKE COUNT OF A SPECIFIC VIDEO, USING VIDEO-ID, FROM LIKE DOCUMENT USING AGGREGATION PIPELINE
+    const likeCountResult = await Like.aggregate([
+      {
+        $match: {
+          video: new mongoose.Types.ObjectId(videoId),
+        },
+      },
+      {
+        $count: "likeCount",
+      },
+    ]);
+
+    totalLike =
+      // In case no documents are found.
+      likeCountResult.length > 0 ? likeCountResult[0].likeCount : 0;
   } catch (error) {
     throw new ApiError(400, "Error while toggle video like / dislike", error);
   }
@@ -80,8 +124,10 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        videoLikeStatus,
-        "Video liked / disliked successfully ."
+        { videoLikeStatus, totalLike },
+        videoLikeStatus.isVideoLiked
+          ? "You Liked the video."
+          : "You removed Like form the video."
       )
     );
 });

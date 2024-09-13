@@ -9,12 +9,12 @@ import {
 
 const router = Router();
 
-router.route("/video/getlike/:videoId").get(getVideoTotalLike);
+router.route("/video/getlike").get(getVideoTotalLike);
 
 router.use(verifyJwt); // USER AUTHENTICATION WILL APPLY FOR ALL the following ROUTES below .
 
 // +++++++++ ADD + GET COUNT LIKE ROUTE +++++++++
-router.route("/video/:videoId").post(toggleVideoLike);
+router.route("/video/toggle/:videoId").post(toggleVideoLike);
 router.route("/comment/:commentId").post(toggleCommentLike);
 
 // +++++++++ GET USER'S ALL LIKED VIDEOs ROUTE ++++++++++

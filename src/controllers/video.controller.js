@@ -253,9 +253,6 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
 const getVideoById = asyncHandler(async (req, res) => {
   const { vId, uId } = req.query;
 
-  console.log("vId ----", vId);
-  console.log("uId ----", uId);
-
   if (!isValidObjectId(vId)) {
     throw new ApiError(400, "Invalid video id.");
   }
@@ -305,7 +302,6 @@ const getVideoById = asyncHandler(async (req, res) => {
     const currentUser = await User.findById(uId).select(
       "-password -avatar_public_id -coverImage_public_id -refreshToken"
     );
-    console.log("currentUser =-=-=", currentUser);
 
     if (!currentUser.watchHistory.includes(vId)) {
       await Video.findByIdAndUpdate(
