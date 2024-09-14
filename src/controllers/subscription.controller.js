@@ -3,95 +3,167 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { Subscription } from "../models/subscription.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-
-// ++++++++++ TOGGLE SUBSCRIPTON ++++++++
-const toggelSubscription = asyncHandler(async (req, res) => {
-  const { channelId } = req.params;
-  const currentUserId = req.user?._id;
-
-  if (!isValidObjectId(channelId)) {
-    throw new ApiError(400, "Invalid Channel Id !");
-  }
-
-  const isSubscribed = await Subscription.findOne({
-    channel: channelId,
-    subscriber: currentUserId,
-  });
-
-  console.log("isSubscribed =-=-=-", isSubscribed);
-
-  let subscriptionStatus;
-
-  try {
-    if (!isSubscribed) {
-      await Subscription.create({
-        channel: channelId,
-        subscriber: currentUserId,
-      });
-
-      subscriptionStatus = { isSubscribed: true };
-    } else {
-      await Subscription.findByIdAndDelete(isSubscribed?._id);
-
-      // --- ANOTHER APPROACH ---
-      // await Subscription.deleteOne({
-      //   _id: isSubscribed?._id,
-      // });
-      subscriptionStatus = { isSubscribed: false };
-    }
-  } catch (error) {
-    new ApiError(500, "Subscription Toggled FAILED !!!", error);
-  }
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        subscriptionStatus,
-        "Subscription Toggled Succcessfully"
-      )
-    );
-});
+import { User } from "../models/user.model.js";
 
 // +++++ GET CHANNEL SUBSCRIBERS COUNT ++++++
 // controller to return subscriber-count of a channel
 const getChannelSubscriberCount = asyncHandler(async (req, res) => {
-  const { channelId } = req.params;
+  // const { chId } = req.params;
+  const { chId, uId } = req.query;
 
-  if (!isValidObjectId(channelId)) {
+  // console.log("channel-id from query -----", chId);
+  // console.log("user-id from query ------", uId);
+
+  if (!isValidObjectId(chId)) {
     throw new ApiError(400, "Invalid Channel Id !!! ");
   }
 
-  const subscriberCount = await Subscription.aggregate([
+  const chExist = await User.findById(chId).select(
+    "-password -coverImage_public_id -avatar_public_id  "
+  );
+  // console.log("chExist =======", chExist);
+
+  if (!chExist) {
+    throw new ApiError(400, "Channel not found !!!");
+  }
+
+  let channelSubscriptionStatus;
+  if (isValidObjectId(uId)) {
+    // WITHOUT isValidObjectId() IT'LL SHOW ERROR
+
+    const isChannelSubscribed = await Subscription.findOne({
+      subscriber: uId,
+      channel: chId,
+    });
+    // ++++++ CHECHING WHETHER CURRENT USER ALREADY SUBSCRIBED THIS CHANNEL OR NOT ++++++++
+    if (isChannelSubscribed) {
+      channelSubscriptionStatus = { isChannelSubscribed: true };
+    } else {
+      channelSubscriptionStatus = { isChannelSubscribed: false };
+    }
+  }
+
+  // FIND OUT SUBSCRIPTION COUNT OF A SPECIFIC CHANNEL, USING CHANNEL-ID, FROM SUBSCRIPTION DOCUMENT USING AGGREGATION PIPELINE
+  const subscriberCountResult = await Subscription.aggregate([
     {
       $match: {
-        channel: new mongoose.Types.ObjectId(channelId),
+        channel: new mongoose.Types.ObjectId(chId),
       },
     },
     {
-      $group: {
-        _id: null,
-        totalSubscribers: {
-          $sum: 1,
-        },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        totalSubscribers: 1,
-      },
+      $count: "subscriberCount",
     },
   ]);
+
+  const totalSubscribers =
+    // In case no documents are found.
+    subscriberCountResult.length > 0
+      ? subscriberCountResult[0].subscriberCount
+      : 0;
+
+  // ++++++ ALTERNATIVE APPROACH OF AGGREGATION PIPELINE +++++++
+  // const subscriberCount = await Subscription.aggregate([
+  //   {
+  //     $match: {
+  //       channel: new mongoose.Types.ObjectId(chId),
+  //     },
+  //   },
+  //   {
+  //     $group: {
+  //       _id: null,
+  //       totalSubscribers: {
+  //         $sum: 1,
+  //       },
+  //     },
+  //   },
+  //   {
+  //     $project: {
+  //       _id: 0,
+  //       totalSubscribers: 1,
+  //     },
+  //   },
+  // ]);
   // console.log("subscribers =-=-=-  ", subscriberCount[0]);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      // subscriberCount[0] || { totalSubscribers: 0 },
+      { channelSubscriptionStatus, totalSubscribers },
+      "Subscriber count fetched Successfully "
+    )
+  );
+});
+
+// ++++++++++ TOGGLE SUBSCRIPTON ++++++++
+const toggleSubscription = asyncHandler(async (req, res) => {
+  const { chId } = req.params;
+  const currentUserId = req.user?._id;
+  // console.log("chId ______", chId);
+  // console.log("currentUserId =-=-=-", currentUserId);
+
+  if (!isValidObjectId(chId)) {
+    throw new ApiError(400, "Invalid Channel Id !");
+  }
+
+  const chExist = await User.findById(chId);
+  if (!chExist) {
+    throw new ApiError(400, "Channel not found !!!");
+  }
+
+  const isSubscribed = await Subscription.findOne({
+    channel: chId,
+    subscriber: currentUserId,
+  });
+
+  // console.log("isSubscribed =-=-=-", isSubscribed);
+
+  // TOGGLE SUBSCRIPTION
+  let subscriptionStatus;
+
+  if (!isSubscribed) {
+    await Subscription.create({
+      channel: chId,
+      subscriber: currentUserId,
+    });
+    subscriptionStatus = { isSubscribed: true };
+  } else {
+    await Subscription.findByIdAndDelete(isSubscribed?._id);
+
+    // --- ANOTHER APPROACH ---
+    // await Subscription.deleteOne({
+    //   _id: isSubscribed?._id,
+    // });
+    subscriptionStatus = { isSubscribed: false };
+  }
+
+  // FIND OUT SUBSCRIPTION COUNT OF A SPECIFIC CHANNEL, USING CHANNEL-ID, FROM SUBSCRIPTION DOCUMENT USING AGGREGATION PIPELINE
+  const subscriberCountResult = await Subscription.aggregate([
+    {
+      $match: {
+        channel: new mongoose.Types.ObjectId(chId),
+      },
+    },
+    {
+      $count: "subscriberCount",
+    },
+  ]);
+
+  const totalSubscribers =
+    // In case no documents are found.
+    subscriberCountResult.length > 0
+      ? subscriberCountResult[0].subscriberCount
+      : 0;
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        subscriberCount[0] || { totalSubscribers: 0 },
-        "Subscriber count fetched Successfully "
+        { subscriptionStatus, totalSubscribers },
+        subscriptionStatus.isSubscribed
+          ? "You Subscribed this channel."
+          : "You Unsbscribed this channel."
       )
     );
 });
@@ -158,7 +230,7 @@ const getSubscribedChannelListByUser = asyncHandler(async (req, res) => {
 });
 
 export {
-  toggelSubscription,
+  toggleSubscription,
   getChannelSubscriberCount,
   getSubscribedChannelListByUser,
 };

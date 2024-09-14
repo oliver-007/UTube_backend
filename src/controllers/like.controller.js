@@ -21,7 +21,7 @@ const getVideoTotalLike = asyncHandler(async (req, res) => {
   }
 
   let videoLikeStatus;
-  let totalLike;
+  // let totalLike;
 
   if (isValidObjectId(uId)) {
     // WITHOUT isValidObjectId() IT'LL SHOW ERROR
@@ -50,7 +50,7 @@ const getVideoTotalLike = asyncHandler(async (req, res) => {
     },
   ]);
 
-  totalLike =
+  const totalLike =
     // In case no documents are found.
     likeCountResult.length > 0 ? likeCountResult[0].likeCount : 0;
 
@@ -86,38 +86,34 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
   // TOGGLE VIDEO LIKE
   let videoLikeStatus;
-  let totalLike;
-  try {
-    if (!isVideoLiked) {
-      await Like.create({
-        video: videoId,
-        likedBy: currentUserId,
-      });
 
-      videoLikeStatus = { isVideoLiked: true };
-    } else {
-      await Like.findByIdAndDelete(isVideoLiked?._id);
-      videoLikeStatus = { isVideoLiked: false };
-    }
+  if (!isVideoLiked) {
+    await Like.create({
+      video: videoId,
+      likedBy: currentUserId,
+    });
 
-    // FIND OUT LIKE COUNT OF A SPECIFIC VIDEO, USING VIDEO-ID, FROM LIKE DOCUMENT USING AGGREGATION PIPELINE
-    const likeCountResult = await Like.aggregate([
-      {
-        $match: {
-          video: new mongoose.Types.ObjectId(videoId),
-        },
-      },
-      {
-        $count: "likeCount",
-      },
-    ]);
-
-    totalLike =
-      // In case no documents are found.
-      likeCountResult.length > 0 ? likeCountResult[0].likeCount : 0;
-  } catch (error) {
-    throw new ApiError(400, "Error while toggle video like / dislike", error);
+    videoLikeStatus = { isVideoLiked: true };
+  } else {
+    await Like.findByIdAndDelete(isVideoLiked?._id);
+    videoLikeStatus = { isVideoLiked: false };
   }
+
+  // FIND OUT LIKE COUNT OF A SPECIFIC VIDEO, USING VIDEO-ID, FROM LIKE DOCUMENT USING AGGREGATION PIPELINE
+  const likeCountResult = await Like.aggregate([
+    {
+      $match: {
+        video: new mongoose.Types.ObjectId(videoId),
+      },
+    },
+    {
+      $count: "likeCount",
+    },
+  ]);
+
+  const totalLike =
+    // In case no documents are found.
+    likeCountResult.length > 0 ? likeCountResult[0].likeCount : 0;
 
   return res
     .status(200)
