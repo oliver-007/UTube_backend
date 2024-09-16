@@ -17,6 +17,6 @@ router.use(verifyJwt); // USER AUTHENTICATION WILL APPLY FOR ALL the following R
 router.route("/ch/toggle/:chId").post(toggleSubscription);
 
 // GET SUBSCRIBED CHANNELS BY CURRENT LOGGED-IN USER ROUTE
-router.route("/u/:userId").get(getSubscribedChannelListByUser);
+router.route("/u/subscribed").get(getSubscribedChannelListByUser);
 
 export default router;
