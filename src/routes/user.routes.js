@@ -73,7 +73,7 @@ router.route("/update-cover-image").patch(
 );
 
 // ++++++++ GET CHANNEL PROFILE ROUTE ++++++
-router.route("/channel/:username").get(verifyJwt, getUserChannelProfile);
+router.route("/channel-profile").get(getUserChannelProfile);
 
 // +++++++++ GET USER WATCH-HISTORY ROUTE +++++++++
 router.route("/watch-history").get(verifyJwt, getWatchHistory);

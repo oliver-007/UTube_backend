@@ -7,7 +7,7 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 // +++++ ACCESS & REFRESH TOKEN GENERATION SIMULTANEOUSLY +++++
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -480,17 +480,31 @@ const updatedCoverImage = asyncHandler(async (req, res) => {
 
 // +++++++++ GET USER CHANNEL PROFILE ++++++++++
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-  const { username } = req.params;
-  const currentUserId = req.user?._id;
+  // const {chId,  username } = req.params;
+  const { chId, currUId } = req.query;
 
-  if (!username.trim()) {
-    throw new ApiError(400, "username not found !");
+  console.log("chId from getChannelProfile ********  ", chId);
+  console.log("currUId from getChannelProfile ********  ", currUId);
+
+  // const currentUserId = req.user?._id;
+
+  // if (!username.trim()) {
+  //   throw new ApiError(400, "username is required !");
+  // }
+
+  if (!chId) {
+    throw new ApiError(400, "Channel-Id is required !");
+  }
+
+  if (!isValidObjectId(chId)) {
+    throw new ApiError(400, "Invalid Channel Id !");
   }
 
   const channel = await User.aggregate([
     {
       $match: {
-        username: username?.toLowerCase(),
+        // username: username?.toLowerCase(),
+        _id: new mongoose.Types.ObjectId(chId),
       },
     },
     {
@@ -517,13 +531,26 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         channelSubscribedToCount: {
           $size: "$subscribedTo",
         },
-        isSubscribed: {
-          $cond: {
-            if: { $in: [currentUserId, "$subscribers.subscriber"] },
-            then: true,
-            else: false,
-          },
-        },
+        isSubscribed: currUId
+          ? {
+              $cond: {
+                if: {
+                  $in: [
+                    new mongoose.Types.ObjectId(currUId),
+                    {
+                      $map: {
+                        input: "$subscribers",
+                        as: "subscriber",
+                        in: "$$subscriber.subscriber",
+                      },
+                    },
+                  ],
+                },
+                then: true,
+                else: false,
+              },
+            }
+          : false,
       },
     },
     {
@@ -549,7 +576,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, channel[0], "User channel fetched successfully.")
+      new ApiResponse(200, channel[0], "Channel profile fetched successfully.")
     );
 });
 

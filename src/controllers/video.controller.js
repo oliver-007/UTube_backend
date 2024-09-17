@@ -97,9 +97,7 @@ const videoUpload = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(200, video, "Video uploaded on Databse Successfully. 👍 ")
-    );
+    .json(new ApiResponse(200, video, "Video uploaded Successfully. 👍 "));
 });
 
 // +++++++++++ GET ALL VIDEOS OF ALL USERS +++++++++
