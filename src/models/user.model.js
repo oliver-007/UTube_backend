@@ -2,6 +2,20 @@ import { Schema, model } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
 
+// Utility function to format the username
+function formatUsername(username) {
+  const formattedUsername = username
+    .split(" ") // Split the string by spaces
+    .filter((word) => word.trim() !== "") // Remove any extra spaces
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Capitalize the first letter of each word
+    .join(""); // Join the words back without a space
+
+  // Add '@' at the beginning if not already present
+  return formattedUsername.startsWith("@")
+    ? formattedUsername
+    : `@${formattedUsername}`;
+}
+
 const userSchema = new Schema(
   {
     username: {
@@ -9,7 +23,6 @@ const userSchema = new Schema(
       required: [true, "username is required"],
       unique: true,
       trim: true,
-      index: true,
     },
     email: {
       type: String,
@@ -55,6 +68,12 @@ const userSchema = new Schema(
 
 // ++++++ PASSWORD ENCRIPTION BEFORE SAVE +++++
 userSchema.pre("save", async function (next) {
+  // Format the username before saving
+  if (this.isModified("username")) {
+    this.username = formatUsername(this.username);
+  }
+
+  // Hash the password if it was modified
   if (!this.isModified("password")) return next();
   this.password = await bcryptjs.hash(this.password, 10);
   next();
