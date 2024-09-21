@@ -172,7 +172,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 // controller to return channel list to which user has subscribed
 const getSubscribedChannelListByUser = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
-  console.log("currentUserId =-=-=-  ", currentUserId);
+  // console.log("currentUserId =-=-=-  ", currentUserId);
 
   const subscribedChannelListWithDetails = await Subscription.aggregate([
     {

@@ -313,19 +313,52 @@ const getVideoById = asyncHandler(async (req, res) => {
       );
     }
 
+    // *************** IMPORTANT ********************
+    // When I use $addToSet in MongoDB, it ensures that a value is only added to the array if it doesn't already exist. However, it does not guarantee any specific order for the elements in the array, especially if the array already contains the element I'm adding. If the video is already in the watchHistory array, $addToSet will simply prevent duplication, but it won't move the item to the end of the array.
+
+    // Desired Behavior: Last Watched Video on Top
+    // If I want the most recently watched video to always appear at the end (or top when sorted), $addToSet is not suitable. Instead, you should use the $pull operator to first remove the video (if it exists) and then use $push to add it back to the array, ensuring it's placed at the last position. But since I want to add the latest watched video to the top of the array, I've to do this : To push the video to the top of the watchHistory array (i.e., to make it the first element in the array), I've to use MongoDB's $push operator with the $each and $position modifiers. This allows me to insert the video at a specific position—in this case, at the beginning of the array.
+
     // PUT VIDEO_ID IN USER'S WATCH_HISTORY ARRAY
+    if (currentUser.watchHistory.includes(vId)) {
+      await User.findByIdAndUpdate(uId, {
+        // First remove the video if it exists in the array
+        $pull: {
+          watchHistory: vId,
+        },
+      });
+    }
+
+    // Now, push the video to the top (position 0) of the watchHistory array
     await User.findByIdAndUpdate(
       uId,
-
       {
-        $addToSet: {
+        $push: {
           watchHistory: vId,
+          // {
+          //   $each: [vId],
+          //   $position: 0, // This pushes the video to the top of the array
+          // },
         },
       },
       {
         new: true,
       }
     );
+
+    // ************* PUT VIDEO_ID IN USER'S WATCH_HISTORY ARRAY **********
+    // await User.findByIdAndUpdate(
+    //   uId,
+
+    //   {
+    //     $addToSet: {
+    //       watchHistory: vId,
+    //     },
+    //   },
+    //   {
+    //     new: true,
+    //   }
+    // );
   }
 
   return res

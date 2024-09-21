@@ -8,6 +8,7 @@ import {
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose, { isValidObjectId } from "mongoose";
+import { pagination } from "../utils/pagination.js";
 
 // +++++ ACCESS & REFRESH TOKEN GENERATION SIMULTANEOUSLY +++++
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -303,7 +304,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   // console.log("currentUserId___", currentUserId);
 
   const currentUser = await User.findById(currentUserId);
-  console.log("currentUser____", currentUser);
+  // console.log("currentUser____", currentUser);
 
   const isHashedPasswordCorrect =
     await currentUser.isPasswordCorrect(oldPassword); // password checking method() from user.model.js
@@ -483,8 +484,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   // const {chId,  username } = req.params;
   const { chId, currUId } = req.query;
 
-  console.log("chId from getChannelProfile ********  ", chId);
-  console.log("currUId from getChannelProfile ********  ", currUId);
+  // console.log("chId from getChannelProfile ********  ", chId);
+  // console.log("currUId from getChannelProfile ********  ", currUId);
 
   // const currentUserId = req.user?._id;
 
@@ -571,7 +572,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Channel does not exists !");
   }
 
-  console.log("channel ----", channel);
+  // console.log("channel ----", channel);
 
   return res
     .status(200)
@@ -583,6 +584,23 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 // +++++++++ GET WATCH-HISTORY  ++++++++++
 const getWatchHistory = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
+  const { page, limit } = req.query;
+  // console.log("page-num from watch-history controller ******* ", page);
+
+  // ********* WATCHED-VIDEO OF CURRENT USER COUNT **********
+  const currUser = await User.findById(currentUserId);
+  const totalWatchedVideo = currUser.watchHistory.length || 0;
+
+  // console.log("totalWatchedVideo ******** ", totalWatchedVideo);
+
+  // ******** PAGINATION ********
+  const { parsedLimitForPerPage, skip, totalPages } = await pagination(
+    page,
+    limit,
+    totalWatchedVideo
+  );
+
+  // console.log("parsedLimitForPerPage ***********", parsedLimitForPerPage);
 
   // ++++++ USING AGGREGATION PIPELINE +++++++
   const user = await User.aggregate([
@@ -622,18 +640,75 @@ const getWatchHistory = asyncHandler(async (req, res) => {
               },
             },
           },
+          {
+            $skip: skip,
+          },
+          {
+            $limit: parsedLimitForPerPage,
+          },
+          {
+            $sort: {
+              updatedAt: -1,
+            },
+          },
         ],
       },
     },
   ]);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        watchHistory: user[0].watchHistory,
+        currentPage: parseInt(page),
+        totalPages,
+      },
+      "Fetched watch histroy Successfully"
+    )
+  );
+});
+
+// *********** REMOVE VIDEO-ID FORM WATCH-HISTORY  ***********
+const removeVIdFromWatchHistory = asyncHandler(async (req, res) => {
+  const currentUserId = req.user?._id;
+  const { vId } = req.query;
+
+  // console.log("curr user id from remove wHV ------", currentUserId);
+
+  if (!vId) {
+    throw new ApiError(400, "Video-id is required !");
+  }
+
+  if (!isValidObjectId(vId)) {
+    throw new ApiError(400, "Invalid video id !");
+  }
+
+  const currentUser = await User.findById(currentUserId);
+  // console.log(
+  //   "current user from deleteVIdFromWatchHistory **********",
+  //   currentUser
+  // );
+
+  if (currentUser.watchHistory.includes(vId)) {
+    await User.findByIdAndUpdate(
+      currentUserId,
+      {
+        $pull: {
+          watchHistory: vId,
+        },
+      },
+      { new: true }
+    );
+  }
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        user[0].watchHistory,
-        "Fetched watch histroy Successfully"
+        { isRemoved: true },
+        "Video removed form watch-history successfully."
       )
     );
 });
@@ -650,4 +725,5 @@ export {
   updatedCoverImage,
   getUserChannelProfile,
   getWatchHistory,
+  removeVIdFromWatchHistory,
 };

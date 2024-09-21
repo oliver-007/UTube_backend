@@ -8,6 +8,7 @@ import {
   logoutUser,
   refreshAccessToken,
   registerUser,
+  removeVIdFromWatchHistory,
   updateUserAvatar,
   updateUserDetails,
   updatedCoverImage,
@@ -76,6 +77,9 @@ router.route("/update-cover-image").patch(
 router.route("/channel-profile").get(getUserChannelProfile);
 
 // +++++++++ GET USER WATCH-HISTORY ROUTE +++++++++
-router.route("/watch-history").get(verifyJwt, getWatchHistory);
+router
+  .route("/watch-history")
+  .get(verifyJwt, getWatchHistory)
+  .patch(verifyJwt, removeVIdFromWatchHistory);
 
 export default router;
