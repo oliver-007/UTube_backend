@@ -7,29 +7,22 @@ import { Video } from "../models/video.model.js";
 
 // +++++++++ CREATE PLAYLIST +++++++++
 const createPlaylist = asyncHandler(async (req, res) => {
-  const currentUserId = req.user?._id;
-  const { name, description } = req.body;
+  const currentUId = req.user?._id;
+  const { name } = req.body;
+  const { vId } = req.query;
 
-  if (!(name || description)) {
-    throw new ApiError(400, "Name & Description required !!!");
-  }
+  // console.log("name from playlist controller -------------", name);
+  // console.log("vId from playlist controller -------------", vId);
 
-  // EMPTY FIELD VERIFICATION
-  if (
-    [name, description].some((field) => {
-      return field?.trim() === "";
-    })
-  ) {
-    throw new ApiError(400, "Name & Description shouldn't be empty !!!");
+  if (!name) {
+    throw new ApiError(400, "Name is required !!!");
   }
 
   // PLAYLIST NAME ALREADY EXIST FOR SAME USER, VERIFICATION
   const playlistExist = await Playlist.aggregate([
     {
       $match: {
-        // 1ST - find playlist owner
-        // 2nd - check, whether playlist name already exist or not with same owner
-        owner: new mongoose.Types.ObjectId(currentUserId),
+        owner: new mongoose.Types.ObjectId(currentUId),
         name,
       },
     },
@@ -43,18 +36,20 @@ const createPlaylist = asyncHandler(async (req, res) => {
 
   const playlist = await Playlist.create({
     name,
-    description,
-    owner: currentUserId,
+    owner: currentUId,
+    videoList: [vId],
   });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, playlist, "Playlist created Successfully"));
+    .json(
+      new ApiResponse(200, playlist, `Video added to '${name}' Successfully.`)
+    );
 });
 
 // +++++++ UPDATE PLAYLIST NAME & DETAILS +++++++++
 const updatePlaylist = asyncHandler(async (req, res) => {
-  const currentUserId = req.user?._id;
+  const currentUId = req.user?._id;
 
   const { name, description } = req.body;
   if (!(name || description)) {
@@ -81,7 +76,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   }
 
   // UPDATE NAME & DESCRIPTION VERIFIYING OWNER
-  if (!playlistExist?.owner.equals(currentUserId)) {
+  if (!playlistExist?.owner.equals(currentUId)) {
     // While comparing 2 different objectIds in mongoose, must use "equals()" method. Direct comparison using == or === won't work as expected because ObjectIds are complex objects.
     throw new ApiError(
       400,
@@ -114,7 +109,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
 
 // ++++++++ DELETE PLAYLIST +++++++
 const deletePlaylist = asyncHandler(async (req, res) => {
-  const currentUserId = req.user?._id;
+  const currentUId = req.user?._id;
 
   const { playlistId } = req.params;
   if (!playlistId) {
@@ -128,7 +123,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
   // DELETE PLAYLIST BY VERIFIYING OWNER
   const playlistExist = await Playlist.findById(playlistId);
 
-  if (!playlistExist?.owner.equals(currentUserId)) {
+  if (!playlistExist?.owner.equals(currentUId)) {
     // While comparing 2 different objectIds in mongoose, must use "equals()" method. Direct comparison using == or === won't work as expected because ObjectIds are complex objects.
     throw new ApiError(
       400,
@@ -147,33 +142,32 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 
 // +++++++ ADD VIDEO TO PLAYLIST +++++++
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
-  const currentUserId = req.user?._id;
+  const currentUId = req.user?._id;
+  const { vId, pLId } = req.query;
 
-  const { videoId, playlistId } = req.params;
-
-  if (!(isValidObjectId(videoId) || isValidObjectId(playlistId))) {
+  if (!(isValidObjectId(vId) || isValidObjectId(pLId))) {
     throw new ApiError(400, "Invalid Video or playlist Id !!!");
   }
 
-  if (!(videoId || playlistId)) {
+  if (!(vId || pLId)) {
     throw new ApiError(400, "Video id or Playlist Id required !!!");
   }
 
   // VIDOE AVAILABILITY VERIFICATION
-  const videoExist = await Video.findById(videoId);
+  const videoExist = await Video.findById(vId);
 
   if (!videoExist) {
     throw new ApiError(400, "Video not found !!!");
   }
 
   // PLAYLIST AVAILABLITY VERIFICATION
-  const playlistExist = await Playlist.findById(playlistId);
+  const playlistExist = await Playlist.findById(pLId);
   if (!playlistExist) {
     throw new ApiError(400, "Playlist not found !!!");
   }
 
   // UPDATE VIDEOLIST BY ADDING VIDEO BY VERIFIYING OWNER
-  if (!playlistExist?.owner.equals(currentUserId)) {
+  if (!playlistExist?.owner.equals(currentUId)) {
     // While comparing 2 different objectIds in mongoose, must use "equals()" method. Direct comparison using == or === won't work as expected because ObjectIds are complex objects.
     throw new ApiError(
       400,
@@ -181,17 +175,34 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     );
   } else {
     // UPDATE VIDEOLIST FIELD OF PLAYLIST
-    const updatedPlaylist = await Playlist.findByIdAndUpdate(
-      playlistId,
-      {
-        $addToSet: {
-          videoList: videoId,
+
+    let updatedPlaylist;
+
+    if (!playlistExist.videoList.includes(vId)) {
+      updatedPlaylist = await Playlist.findByIdAndUpdate(
+        pLId,
+
+        // instead of using $addToSet operator, i used $push with $each & $positon operator so that new video can be added to the top of the array. And to avoid duplicat vId i used this condition first : "!playlistExist.videoList.includes(vId)"
+
+        // {
+        //   $addToSet: {
+        //     videoList: vId,
+        //   },
+        // },
+        {
+          $push: {
+            videoList: {
+              $each: [vId],
+              $position: 0, // Push to the 0th position
+            },
+          },
         },
-      },
-      {
-        new: true,
-      }
-    );
+        {
+          new: true,
+        }
+      );
+    } else {
+    }
 
     return res
       .status(200)
@@ -199,7 +210,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         new ApiResponse(
           200,
           updatedPlaylist,
-          "Video added to playlist Successfully."
+          `${playlistExist.videoList.includes(vId) ? `Already added to ${playlistExist.name}  playlist.` : `Video added to '${playlistExist.name}' playlist Successfully.`} `
         )
       );
   }
@@ -207,29 +218,30 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
 // ++++++ REMOVE VIDEO FROM PLAYLIST +++++++
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
-  const currentUserId = req.user?._id;
-  const { videoId, playlistId } = req.params;
+  const currentUId = req.user?._id;
+  const { vId, pLId } = req.query;
 
-  if (!(isValidObjectId(videoId) || isValidObjectId(playlistId))) {
+  if (!(isValidObjectId(vId) || isValidObjectId(pLId))) {
     throw new ApiError(400, "Invalid video or playlist id !!!");
   }
 
-  if (!(videoId || playlistId)) {
-    throw new ApiError(400, "Video id or Playlist Id required !!!");
+  if (!(vId || pLId)) {
+    throw new ApiError(400, "Video id & Playlist Id required !!!");
   }
 
-  const videoExist = await Video.findById(videoId);
+  const videoExist = await Video.findById(vId);
+
   if (!videoExist) {
     throw new ApiError(400, "Video not found !!!");
   }
 
-  const playlistExist = await Playlist.findById(playlistId);
+  const playlistExist = await Playlist.findById(pLId);
   if (!playlistExist) {
     throw new ApiError(400, "Playlist not found !!!");
   }
 
   // UPDATE VIDEOLIST BY REMOVING VIDEO BY VERIFIYING OWNER
-  if (!playlistExist?.owner.equals(currentUserId)) {
+  if (!playlistExist?.owner.equals(currentUId)) {
     // While comparing 2 different objectIds in mongoose, must use "equals()" method. Direct comparison using == or === won't work as expected because ObjectIds are complex objects.
     throw new ApiError(
       400,
@@ -237,10 +249,10 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     );
   } else {
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
-      playlistId,
+      pLId,
       {
         $pull: {
-          videoList: videoId,
+          videoList: vId,
         },
       },
       {
@@ -254,7 +266,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
         new ApiResponse(
           200,
           updatedPlaylist,
-          "Video removed from playlist Successfully. "
+          `Video removed from '${playlistExist.name}' playlist Successfully. `
         )
       );
   }
@@ -262,19 +274,20 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
 // +++++++ GET ANY USER'S ALL PLAYLIST ++++++++
 const getAnyUsersAllPlaylist = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-  if (!userId) {
+  // const { uId } = req.params;
+  const { uId } = req.query;
+  if (!uId) {
     throw new ApiError(400, "User id required !!!");
   }
 
-  if (!isValidObjectId(userId)) {
+  if (!isValidObjectId(uId)) {
     throw new ApiError(400, "Invalid User Id !!!");
   }
 
   const allPlaylist = await Playlist.aggregate([
     {
       $match: {
-        owner: new mongoose.Types.ObjectId(userId),
+        owner: new mongoose.Types.ObjectId(uId),
       },
     },
     // FOR OWNER OF PLAYLIST

@@ -16,15 +16,18 @@ router.use(verifyJwt); // USER AUTHENTICATION WILL APPLY FOR ALL ROUTES.
 router.route("/").post(createPlaylist);
 
 // ++++++ UPDATE PLAYLIST NAME & DETAILS + DELETE PLAYLIST ROUTE +++++++
-router.route("/:playlistId").patch(updatePlaylist).delete(deletePlaylist);
+router
+  .route("/update/:playlistId")
+  .patch(updatePlaylist)
+  .delete(deletePlaylist);
 
 // +++++ ADD VIDEO TO PLAYLIST ROUTE ++++++
-router.route("/add/:videoId/:playlistId").patch(addVideoToPlaylist);
+router.route("/add").patch(addVideoToPlaylist);
 
 // +++++++ REMOVE VIDEO FROM PLAYLIST ROUTE ++++++
-router.route("/remove/:videoId/:playlistId").patch(removeVideoFromPlaylist);
+router.route("/remove").patch(removeVideoFromPlaylist);
 
 // +++++++++ GET ANY USER'S ALL PLAYLIST ROUTE ++++++++++
-router.route("/u/:userId").get(getAnyUsersAllPlaylist);
+router.route("/u").get(getAnyUsersAllPlaylist);
 
 export default router;
