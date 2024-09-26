@@ -328,7 +328,6 @@ const getAnyUsersAllPlaylist = asyncHandler(async (req, res) => {
             $project: {
               video_public_id: 0,
               thumbnail_public_id: 0,
-              isPublished: 0,
             },
           },
           // FOR OWNER OF VIDEOS
