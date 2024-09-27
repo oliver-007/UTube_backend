@@ -5,12 +5,16 @@ import {
   createPlaylist,
   deletePlaylist,
   getAnyUsersAllPlaylist,
+  getPlaylistById,
   removeVideoFromPlaylist,
   updatePlaylist,
 } from "../controllers/playlist.controller.js";
 const router = Router();
 
-router.use(verifyJwt); // USER AUTHENTICATION WILL APPLY FOR ALL ROUTES.
+// +++++++++ GET ANY PLAYLIST BY PLAYLIST-ID & CHANNEL-ID +++++++++
+router.route(`/pl`).get(getPlaylistById);
+
+router.use(verifyJwt); // USER AUTHENTICATION WILL APPLY FOR ALL THE FOLLOWING  ROUTES BELLOW.
 
 // +++++ CREATE PLAYLIST ROUTE +++++
 router.route("/").post(createPlaylist);

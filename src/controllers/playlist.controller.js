@@ -274,7 +274,6 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
 // +++++++ GET ANY USER'S ALL PLAYLIST ++++++++
 const getAnyUsersAllPlaylist = asyncHandler(async (req, res) => {
-  // const { uId } = req.params;
   const { uId } = req.query;
   if (!uId) {
     throw new ApiError(400, "User id required !!!");
@@ -372,6 +371,110 @@ const getAnyUsersAllPlaylist = asyncHandler(async (req, res) => {
     );
 });
 
+// +++++++++++++ GET SINGLE PLAYLIST BY ID +++++++++++++
+const getPlaylistById = asyncHandler(async (req, res) => {
+  const { pLId } = req.query;
+
+  if (!pLId) {
+    throw new ApiError(400, "Playlist Id is required !!!");
+  }
+  if (!isValidObjectId(pLId)) {
+    throw new ApiError(400, "Invalid playlist Id !!!");
+  }
+  const playlistExist = await Playlist.findById(pLId);
+  if (!playlistExist) {
+    throw new ApiError(400, "Playlist not found !!!");
+  }
+  // ---- PLAYLIST AGGREGATION -----
+  const selectedPlaylist = await Playlist.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(pLId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              fullName: 1,
+              username: 1,
+              email: 1,
+              avatar: 1,
+              coverImage: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: {
+          $first: "$owner",
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "videoList",
+        foreignField: "_id",
+        as: "videoList",
+        pipeline: [
+          {
+            $project: {
+              thumbnail_public_id: 0,
+              video_public_id: 0,
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 1,
+                    fullName: 1,
+                    username: 1,
+                    email: 1,
+                    avatar: 1,
+                    coverImage: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        selectedPlaylist[0],
+        "Playlist fetched by Id successfully ."
+      )
+    );
+});
+
 export {
   createPlaylist,
   updatePlaylist,
@@ -379,4 +482,5 @@ export {
   addVideoToPlaylist,
   removeVideoFromPlaylist,
   getAnyUsersAllPlaylist,
+  getPlaylistById,
 };
