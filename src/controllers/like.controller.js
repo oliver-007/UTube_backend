@@ -128,16 +128,77 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     );
 });
 
+// +++++++++ GET COMMENT LIKE COUNT WITHOUT SIGN-IN OR WITHOUT LIKING COMMENT ++++++++++
+const getCommentTotalLike = asyncHandler(async (req, res) => {
+  const { commId, uId } = req.query;
+
+  if (!isValidObjectId(commId)) {
+    throw new ApiError(400, "Invalid Comment Id !!!");
+  }
+
+  const commentExist = await Comment.findById(commId);
+
+  if (!commentExist) {
+    throw new ApiError(400, "Comment not found !!!");
+  }
+
+  let commentLikeStatus;
+
+  if (isValidObjectId(uId)) {
+    // WITHOUT isValidObjectId() IT'LL SHOW ERROR
+    const isCommentLiked = await Like.findOne({
+      likedBy: uId,
+      comment: commId,
+    });
+
+    // +++++ CHECKING WHETHER CURRENT USER ALREADY LIKED OR NOT ++++
+    if (isCommentLiked) {
+      commentLikeStatus = { isCommentLiked: true };
+    } else {
+      commentLikeStatus = { isCommentLiked: false };
+    }
+  }
+
+  // FIND OUT LIKE COUNT OF A SPECIFIC COMMENT, USING COMMENT-ID, FROM LIKE DOCUMENT USING AGGREGATION PIPELINE
+  const likeCountResult = await Like.aggregate([
+    {
+      $match: {
+        comment: new mongoose.Types.ObjectId(commId),
+      },
+    },
+    {
+      $count: "likeCount",
+    },
+  ]);
+
+  const totalLike =
+    // In case no documents are found.
+    likeCountResult.length > 0 ? likeCountResult[0].likeCount : 0;
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { commentLikeStatus, totalLike },
+        "Total like count & like status of this comment fetched successfully."
+      )
+    );
+});
+
 // +++++++ TOGGLE COMMENT LIKE ++++++++
 const toggleCommentLike = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
-
   const { commentId } = req.params;
+
+  // console.log("commentId *******", commentId);
+
   if (!isValidObjectId(commentId)) {
     throw new ApiError(400, "Invalid comment Id !!!");
   }
-
   const commentExist = await Comment.findById(commentId);
+  // console.log("commentExist ********", commentExist);
+
   if (!commentExist) {
     throw new ApiError(400, "Comment not found !!!");
   }
@@ -149,20 +210,17 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
   // TOGGLE COMMENT LIKE
   let commentLikeStatus;
-  try {
-    if (!isCommentLiked) {
-      await Like.create({
-        likedBy: currentUserId,
-        comment: commentId,
-      });
 
-      commentLikeStatus = { isCommentLiked: true };
-    } else {
-      await Like.findByIdAndDelete(isCommentLiked?._id);
-      commentLikeStatus = { isCommentLiked: false };
-    }
-  } catch (error) {
-    throw new ApiError(400, "Error while comment toggle like / dislike", error);
+  if (!isCommentLiked) {
+    await Like.create({
+      comment: commentId,
+      likedBy: currentUserId,
+    });
+
+    commentLikeStatus = { isCommentLiked: true };
+  } else {
+    await Like.findByIdAndDelete(isCommentLiked?._id);
+    commentLikeStatus = { isCommentLiked: false };
   }
 
   return res
@@ -171,7 +229,9 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         commentLikeStatus,
-        "Comment liked / disliked successfully ."
+        commentLikeStatus.isCommentLiked
+          ? "You Liked the comment."
+          : "You removed Like form the comment."
       )
     );
 });
@@ -251,6 +311,7 @@ const getUsersAllLikedVideos = asyncHandler(async (req, res) => {
 export {
   getVideoTotalLike,
   toggleVideoLike,
+  getCommentTotalLike,
   toggleCommentLike,
   getUsersAllLikedVideos,
 };

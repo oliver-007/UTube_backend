@@ -584,8 +584,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 // +++++++++ GET WATCH-HISTORY  ++++++++++
 const getWatchHistory = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
-  const { page, limit } = req.query;
-  // console.log("page-num from watch-history controller ******* ", page);
+  const { page, limit } = req.query; // here 'limit' porps is inActive, but keep this props for future modification, which'll come from frontend.
 
   // ********* WATCHED-VIDEO OF CURRENT USER COUNT **********
   const currUser = await User.findById(currentUserId);

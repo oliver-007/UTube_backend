@@ -9,10 +9,13 @@ import {
 
 const router = Router();
 
+// ++++++++ GET ALL COMMENTS OF ANY VIDEO ROUTE ++++++++++
+router.route("/").get(getAllCommentsOfAnyVideo);
+
 router.use(verifyJwt); // apply "verifyJwt" middleware to all routes in this file
 
-// ++++++++++ ADD COMMENT + GET ALL COMMENTS ON VIDEO ROUTE +++++++++
-router.route("/:videoId").post(addComment).get(getAllCommentsOfAnyVideo);
+// ++++++++++ ADD COMMENT ON VIDEO ROUTE +++++++++
+router.route("/:videoId").post(addComment);
 
 // ++++++++ DELETE + UPDATE COMMENT ++++++++
 router.route("/:commentId").delete(deleteComment).patch(updateComment);

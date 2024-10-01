@@ -15,24 +15,24 @@ const addComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Comment shouldn't be empty !!!");
   }
 
-  const { videoId } = req.params;
+  const { vId } = req.params;
 
-  if (!videoId) {
+  if (!vId) {
     throw new ApiError(400, "Video id required !!! ");
   }
 
-  if (!isValidObjectId(videoId)) {
+  if (!isValidObjectId(vId)) {
     throw new ApiError(400, "Invalid video id !!!   ");
   }
 
-  const videoExist = await Video.findById(videoId);
+  const videoExist = await Video.findById(vId);
   if (!videoExist) {
     throw new ApiError(400, "Video not found !!!");
   }
 
   const newComment = await Comment.create({
     content,
-    video: videoId,
+    video: vId,
     owner: currentUserId,
   });
 
@@ -121,25 +121,25 @@ const deleteComment = asyncHandler(async (req, res) => {
 
 // ++++++++ GET ALL COMMENTS OF ANY VIDEO +++++++++
 const getAllCommentsOfAnyVideo = asyncHandler(async (req, res) => {
-  const { videoId } = req.params;
+  const { vId, page, limit } = req.query; // here 'limit' porps is inActive, but keep this props for future modification, which'll come from frontend.
 
-  if (!videoId) {
-    throw new ApiError(400, "Video id required !!!");
+  if (!vId) {
+    throw new ApiError(400, "Video Id is required !!!");
   }
 
-  if (!isValidObjectId(videoId)) {
+  if (!isValidObjectId(vId)) {
     throw new ApiError(400, "Invalid Video Id !!!");
   }
 
-  const videoExist = await Video.findById(videoId);
+  const videoExist = await Video.findById(vId);
   if (!videoExist) {
     throw new ApiError(400, "Video not found !!!");
   }
 
   // PAGINATION
-  const { page, limit } = req.query;
+
   // TOTAL COMMENTS COUNT
-  const totalComments = await Comment.countDocuments({ video: videoId });
+  const totalComments = await Comment.countDocuments({ video: vId });
   const { parsedLimitForPerPage, skip, totalPages } = await pagination(
     page,
     limit,
@@ -154,7 +154,7 @@ const getAllCommentsOfAnyVideo = asyncHandler(async (req, res) => {
   const allCommentsAggregateWithPagination = await Comment.aggregate([
     {
       $match: {
-        video: new mongoose.Types.ObjectId(videoId),
+        video: new mongoose.Types.ObjectId(vId),
       },
     },
     {

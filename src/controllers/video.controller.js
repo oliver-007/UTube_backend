@@ -102,7 +102,7 @@ const videoUpload = asyncHandler(async (req, res) => {
 
 // +++++++++++ GET ALL VIDEOS OF ALL USERS +++++++++
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page, limit, query, sortBy, sortType, userId } = req.query;
+  const { page, limit, query, sortBy, sortType, userId } = req.query; // here 'limit' porps is inActive, but keep this props for future modification, which'll come from frontend.
   const totalVideos = await Video.countDocuments({ isPublished: true });
   const { parsedLimitForPerPage, skip, totalPages } = await pagination(
     page,
@@ -169,7 +169,8 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 // ++++++++++ GET ALL VIDEOS OF A SPECIFIC USER ++++++++
 const getAllVideosOfAUser = asyncHandler(async (req, res) => {
-  const { uId, page } = req.query;
+  const { uId, page, limit } = req.query; // here 'limit' porps is inActive, but keep this props for future modification, which'll come from frontend.
+
   // console.log("uid -=-=-=- ", uId);
   // console.log("page -=-=-=- ", page);
   // console.log("limit -=-=-=- ", limit);
@@ -190,6 +191,7 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
   });
   const { parsedLimitForPerPage, skip, totalPages } = await pagination(
     page,
+    limit,
     totalVideos
   );
 
