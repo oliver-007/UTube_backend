@@ -60,16 +60,16 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Name or Description shouldn't be empty !!!");
   }
 
-  const { playlistId } = req.params;
-  if (!playlistId) {
+  const { pLId } = req.params;
+  if (!pLId) {
     throw new ApiError(400, "Playlist id required !!!");
   }
 
-  if (!isValidObjectId(playlistId)) {
+  if (!isValidObjectId(pLId)) {
     throw new ApiError(400, "Invalid playlist Id !!!");
   }
 
-  const playlistExist = await Playlist.findById(playlistId);
+  const playlistExist = await Playlist.findById(pLId);
 
   if (!playlistExist) {
     throw new ApiError(400, "Playlist not found !!!");
@@ -84,7 +84,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     );
   } else {
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
-      playlistId,
+      pLId,
       {
         $set: {
           name,
@@ -110,18 +110,18 @@ const updatePlaylist = asyncHandler(async (req, res) => {
 // ++++++++ DELETE PLAYLIST +++++++
 const deletePlaylist = asyncHandler(async (req, res) => {
   const currentUId = req.user?._id;
+  const { pLId } = req.query;
 
-  const { playlistId } = req.params;
-  if (!playlistId) {
+  if (!pLId) {
     throw new ApiError(400, "Playlist id required !!!");
   }
 
-  if (!isValidObjectId(playlistId)) {
+  if (!isValidObjectId(pLId)) {
     throw new ApiError(400, "Invalid Playlist Id !!!");
   }
 
   // DELETE PLAYLIST BY VERIFIYING OWNER
-  const playlistExist = await Playlist.findById(playlistId);
+  const playlistExist = await Playlist.findById(pLId);
 
   if (!playlistExist?.owner.equals(currentUId)) {
     // While comparing 2 different objectIds in mongoose, must use "equals()" method. Direct comparison using == or === won't work as expected because ObjectIds are complex objects.
@@ -130,12 +130,12 @@ const deletePlaylist = asyncHandler(async (req, res) => {
       "Unauthorized !!! You are not allowed to delete this playlist !!!"
     );
   } else {
-    const deletedPlaylist = await Playlist.findByIdAndDelete(playlistId);
+    const deletedPlaylist = await Playlist.findByIdAndDelete(pLId);
 
     return res
       .status(200)
       .json(
-        new ApiResponse(200, deletedPlaylist, "Playlist deleted Successfully .")
+        new ApiResponse(200, deletedPlaylist, " Playlist deleted Successfully.")
       );
   }
 });
