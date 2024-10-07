@@ -9,13 +9,18 @@ import { pagination } from "../utils/pagination.js";
 // +++++++ ADD COMMENT ++++++
 const addComment = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
-
+  const { vId, parentCommId } = req.query;
   const { content } = req.body;
+
+  // console.log("vId from addComment contorller ********", vId);
+  // console.log("parentCommId from addComment contorller ********", parentCommId);
+  // console.log(typeof parentCommId);
+
+  // console.log("content from addComment contorller ********", content);
+
   if (content.trim() === "") {
     throw new ApiError(400, "Comment shouldn't be empty !!!");
   }
-
-  const { vId } = req.params;
 
   if (!vId) {
     throw new ApiError(400, "Video id required !!! ");
@@ -30,15 +35,37 @@ const addComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Video not found !!!");
   }
 
-  const newComment = await Comment.create({
-    content,
-    video: vId,
-    owner: currentUserId,
-  });
+  let parentCommentExist = null;
+  if (isValidObjectId(parentCommId)) {
+    parentCommentExist = await Comment.findById(parentCommId);
+  }
+  // console.log("parentCommentExist ********* ", parentCommentExist);
+
+  let newComment;
+  if (parentCommentExist) {
+    newComment = await Comment.create({
+      content,
+      video: vId,
+      owner: currentUserId,
+      parentComment: parentCommId,
+    });
+  } else {
+    newComment = await Comment.create({
+      content,
+      video: vId,
+      owner: currentUserId,
+    });
+  }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, newComment, "Comment added Successfully ."));
+    .json(
+      new ApiResponse(
+        200,
+        newComment,
+        ` ${parentCommentExist ? "You Replied successfully. " : "You Commented Successfully."}`
+      )
+    );
 });
 
 // ++++++++ UPDATE COMMENT +++++++
@@ -46,7 +73,7 @@ const updateComment = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
 
   const { content } = req.body;
-  if (!content) {
+  if (content.trim() === "") {
     throw new ApiError(400, "Comment shouldn't be empty !!!");
   }
 
@@ -119,8 +146,8 @@ const deleteComment = asyncHandler(async (req, res) => {
   }
 });
 
-// ++++++++ GET ALL COMMENTS OF ANY VIDEO +++++++++
-const getAllCommentsOfAnyVideo = asyncHandler(async (req, res) => {
+// ++++++++ GET COMMENTS OF ANY VIDEO +++++++++
+const getCommentsOfAnyVideo = asyncHandler(async (req, res) => {
   const { vId, page, limit } = req.query; // here 'limit' porps is inActive, but keep this props for future modification, which'll come from frontend.
 
   if (!vId) {
@@ -137,24 +164,19 @@ const getAllCommentsOfAnyVideo = asyncHandler(async (req, res) => {
   }
 
   // PAGINATION
-
   // TOTAL COMMENTS COUNT
   const totalComments = await Comment.countDocuments({ video: vId });
-  const { parsedLimitForPerPage, skip, totalPages } = await pagination(
+  const { totalPages, skip, parsedLimitForPerPage } = await pagination(
     page,
     limit,
     totalComments
   );
 
-  // console.log("parsedLimit =-=-=-= ", parsedLimitForPerPage);
-  // console.log("skip =-=-=-= ", skip);
-  // console.log("totalComments =-=-=-= ", totalComments);
-  // console.log("totalPages =-=-=-= ", totalPages);
-
-  const allCommentsAggregateWithPagination = await Comment.aggregate([
+  const comments = await Comment.aggregate([
     {
       $match: {
         video: new mongoose.Types.ObjectId(vId),
+        parentComment: null, // Only fetch top-level comments
       },
     },
     {
@@ -176,33 +198,114 @@ const getAllCommentsOfAnyVideo = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        owner: {
-          $first: "$owner",
+        owner: { $first: "$owner" },
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "parentComment", // Lookup replies where parentComment matches the comment's _id
+        as: "replies",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    fullName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: { $first: "$owner" },
+            },
+          },
+          // Fetch nested replies (replies to replies)
+          {
+            $lookup: {
+              from: "comments",
+              localField: "_id",
+              foreignField: "parentComment",
+              as: "nestedReplies",
+              pipeline: [
+                {
+                  $lookup: {
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "owner",
+                    pipeline: [
+                      {
+                        $project: {
+                          username: 1,
+                          fullName: 1,
+                          avatar: 1,
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  $addFields: {
+                    owner: { $first: "$owner" },
+                  },
+                },
+              ],
+            },
+          },
+          // Add the number of replies + nestedReplies
+          {
+            $addFields: {
+              replyCount: {
+                $add: [{ $size: "$nestedReplies" }, 1], // Add 1 for the reply itself and its nested replies
+              },
+            },
+          },
+        ],
+      },
+    },
+
+    // Combine the total number of first-level replies and their nested replies
+    {
+      $addFields: {
+        replyCount: {
+          $reduce: {
+            input: "$replies.replyCount", // Array of reply counts (from replies)
+            initialValue: { count: 0 },
+            in: { count: { $add: ["$$value.count", "$$this"] } }, // Sum of all reply counts
+          },
         },
       },
     },
     {
-      $skip: skip,
+      $skip: skip, // Pagination
     },
     {
-      $limit: parsedLimitForPerPage,
+      $limit: parsedLimitForPerPage, // Limit per page for pagination
     },
   ]);
 
-  // console.log(
-  //   "allCommentsAggregateWithPagination =-=-=-  ",
-  //   allCommentsAggregateWithPagination
-  // );
+  // console.log("comments *********", comments);
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { allCommentsAggregateWithPagination, totalComments, totalPages },
-        "Fetched all comments of this video Successfully"
+        { comments, totalComments, totalPages },
+        "Comments of this video fetched successfully "
       )
     );
 });
 
-export { addComment, updateComment, deleteComment, getAllCommentsOfAnyVideo };
+export { addComment, updateComment, deleteComment, getCommentsOfAnyVideo };

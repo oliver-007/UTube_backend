@@ -22,8 +22,8 @@ router.use(verifyJwt); // USER AUTHENTICATION WILL APPLY FOR ALL THE FOLLOWING  
 // +++++ CREATE PLAYLIST ROUTE +++++
 router.route("/").post(createPlaylist).delete(deletePlaylist);
 
-// ++++++ UPDATE PLAYLIST NAME & DETAILS + DELETE PLAYLIST ROUTE +++++++
-router.route("/update/:playlistId").patch(updatePlaylist);
+// ++++++ UPDATE PLAYLIST NAME ROUTE +++++++
+router.route("/update").patch(updatePlaylist);
 
 // +++++ ADD VIDEO TO PLAYLIST ROUTE ++++++
 router.route("/add").patch(addVideoToPlaylist);

@@ -47,26 +47,26 @@ const createPlaylist = asyncHandler(async (req, res) => {
     );
 });
 
-// +++++++ UPDATE PLAYLIST NAME & DETAILS +++++++++
+// +++++++ UPDATE PLAYLIST NAME  +++++++++
 const updatePlaylist = asyncHandler(async (req, res) => {
   const currentUId = req.user?._id;
+  const { pLId } = req.query;
+  const { name } = req.body;
 
-  const { name, description } = req.body;
-  if (!(name || description)) {
-    throw new ApiError(400, "Name & Description required !!!");
-  }
-
-  if ([name, description].some((field) => field?.trim() === "")) {
-    throw new ApiError(400, "Name or Description shouldn't be empty !!!");
-  }
-
-  const { pLId } = req.params;
   if (!pLId) {
     throw new ApiError(400, "Playlist id required !!!");
   }
 
   if (!isValidObjectId(pLId)) {
     throw new ApiError(400, "Invalid playlist Id !!!");
+  }
+
+  if (!name) {
+    throw new ApiError(400, "Name required !!!");
+  }
+
+  if (name.trim() === "") {
+    throw new ApiError(400, "Name shouldn't be empty !!!");
   }
 
   const playlistExist = await Playlist.findById(pLId);
@@ -88,7 +88,6 @@ const updatePlaylist = asyncHandler(async (req, res) => {
       {
         $set: {
           name,
-          description,
         },
       },
       {
@@ -101,7 +100,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         new ApiResponse(
           200,
           updatedPlaylist,
-          "Playlist Name & Description updated Successfully ."
+          "Playlist Name updated Successfully ."
         )
       );
   }
