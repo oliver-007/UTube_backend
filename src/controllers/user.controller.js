@@ -351,7 +351,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
     {
       new: true,
     }
-  ).select("-password");
+  ).select("-password -coverImage_public_id -avatar_public_id -refreshToken ");
 
   return res
     .status(200)
