@@ -370,14 +370,21 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 // ++++++++ UPDATE VIDEO DETAILS +++++++
 const updateVideo = asyncHandler(async (req, res) => {
-  const { videoId } = req.params;
+  const { vId } = req.query;
   const { title, description } = req.body;
 
-  if (!isValidObjectId(videoId)) {
+  // console.log("vId  from updae-video controller lineNo:376 *******", vId);
+  // console.log("title  from updae-video controller lineNo:377 *******", title);
+  // console.log(
+  //   "dercription from updae-video controller lineNo:378 *******",
+  //   description
+  // );
+
+  if (!isValidObjectId(vId)) {
     throw new ApiError(400, "Invalid video id !");
   }
 
-  const videoDetailsBeforeUpdate = await Video.findById(videoId);
+  const videoDetailsBeforeUpdate = await Video.findById(vId);
   // console.log("videoDetailsBeforeUpdate ---- ", videoDetailsBeforeUpdate);
 
   const previousVideoThumbnailPublicId =
@@ -400,44 +407,48 @@ const updateVideo = asyncHandler(async (req, res) => {
   const updatedThumbnailLocalPath = req.file?.path;
   // console.log("thumbnail----", req.file);
 
-  if (!updatedThumbnailLocalPath) {
-    throw new ApiError(400, " Updated Thumbnail Local file path not found !");
-  }
+  // if (!updatedThumbnailLocalPath) {
+  //   throw new ApiError(400, " Updated Thumbnail Local file path not found !");
+  // }
 
   // UPLOAD ON CLUDINARY UPDATED THUMBNAIL
-  const updatedThumbnailCloudinaryResponse = await uploadOnCloudinary(
-    updatedThumbnailLocalPath
-  );
+  const updatedThumbnailCloudinaryResponse =
+    updatedThumbnailLocalPath &&
+    (await uploadOnCloudinary(updatedThumbnailLocalPath));
 
   // console.log(
   //   "updatedThumbnailCloudinaryResponse ----",
   //   updatedThumbnailCloudinaryResponse
   // );
 
-  if (!updatedThumbnailCloudinaryResponse.url) {
-    throw new ApiError(
-      400,
-      " Updated-thumbnail upload on cloudinary FAILED ( url & public_id not found) !!! "
-    );
-  }
+  // if (!updatedThumbnailCloudinaryResponse?.url) {
+  //   throw new ApiError(
+  //     400,
+  //     " Updated-thumbnail upload on cloudinary FAILED ( url & public_id not found) !!! "
+  //   );
+  // }
 
-  const updatedThumbnailCloudinaryUrl = updatedThumbnailCloudinaryResponse?.url;
+  const updatedThumbnailCloudinaryUrl =
+    updatedThumbnailCloudinaryResponse &&
+    updatedThumbnailCloudinaryResponse?.url;
 
   // UPDATE METHOD APPLY
   const updatedVideoDetails = await Video.findByIdAndUpdate(
-    videoId,
+    vId,
     {
       $set: {
         title,
         description,
-        thumbnail: updatedThumbnailCloudinaryUrl,
+        thumbnail:
+          updatedThumbnailCloudinaryUrl || videoDetailsBeforeUpdate.thumbnail,
       },
     },
     { new: true }
   );
 
   // DELETE PREVIOUS THUMBNAIL FORM CLOUDINARY CLOUD
-  await deleteFromCloudinary(previousVideoThumbnailPublicId);
+  updatedThumbnailCloudinaryUrl &&
+    (await deleteFromCloudinary(previousVideoThumbnailPublicId));
 
   return res
     .status(200)
@@ -452,13 +463,13 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 // +++++++++ DELETE VIDEO +++++++++
 const deleteVideo = asyncHandler(async (req, res) => {
-  const { videoId } = req.params;
+  const { vId } = req.params;
 
-  if (!isValidObjectId(videoId)) {
+  if (!isValidObjectId(vId)) {
     throw new ApiError(400, "Invalid video Id !");
   }
 
-  const videoDetailsFromDatabase = await Video.findById(videoId);
+  const videoDetailsFromDatabase = await Video.findById(vId);
   // console.log("videoDetailsFromDatabase =-=-=- ", videoDetailsFromDatabase);
 
   if (!videoDetailsFromDatabase) {
@@ -469,7 +480,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
   const videoThumbnailPublicId = videoDetailsFromDatabase.thumbnail_public_id;
 
   // DELETE VIDEO FROM DATABASE
-  const deletedVideoResponse = await Video.findByIdAndDelete(videoId);
+  const deletedVideoResponse = await Video.findByIdAndDelete(vId);
   // console.log("deletedVideoResponse -- ", deletedVideoResponse);
 
   if (!deletedVideoResponse) {
@@ -490,13 +501,13 @@ const deleteVideo = asyncHandler(async (req, res) => {
 // ++++++++ VIDEO PUBLISH TOGGLE +++++++
 const togglePublishStatus = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
-  const { videoId } = req.params;
+  const { vId } = req.params;
 
-  if (!isValidObjectId(videoId)) {
+  if (!isValidObjectId(vId)) {
     throw new ApiError(400, "Invalid Video Id !");
   }
 
-  const videoExist = await Video.findById(videoId);
+  const videoExist = await Video.findById(vId);
 
   if (!videoExist) {
     throw new ApiError(400, "Video not found !");
@@ -513,7 +524,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     const publishStatusToggled = !videoExist.isPublished;
 
     updatedVideoPublishStatus = await Video.findByIdAndUpdate(
-      videoId,
+      vId,
       {
         $set: {
           isPublished: publishStatusToggled,

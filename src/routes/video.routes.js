@@ -40,15 +40,15 @@ router.route("/").post(
   videoUpload
 );
 
-// +++++++ SINGLE VIDEO EDIT, DELETE OPARATION ROUTE +++++++
-router
-  .route("/:videoId")
-  .patch(
-    // MULTER MIDDLEWARE INJECTION
-    upload.single("thumbnail"),
-    updateVideo
-  )
-  .delete(deleteVideo);
+// +++++++ VIDEO TITLE, DESCRIPTION, THUMBNAIL EDIT ROUTE +++++++
+router.route("/update").patch(
+  // MULTER MIDDLEWARE INJECTION
+  upload.single("thumbnail"),
+  updateVideo
+);
+
+// +++++++++++ VIDEO DELETE ROUTE ++++++++++++++
+router.route("/delete").delete(deleteVideo);
 
 // ++++++++ VIDEO PUBLISH TOGGLE ROUTE ++++++++
 router.route("/publish/toggle/:videoId").patch(togglePublishStatus);
