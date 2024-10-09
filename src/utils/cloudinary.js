@@ -54,7 +54,7 @@ const deleteFromCloudinary = async (public_id, resource_type) => {
 
     return response;
   } catch (error) {
-    console.log(error?.message, "File deletion from cloudinary  FAILED !!!");
+    console.log("File deletion FAILED : ", error?.message);
   }
 };
 

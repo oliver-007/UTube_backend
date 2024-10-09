@@ -187,8 +187,17 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
 
   const totalVideos = await Video.countDocuments({
     owner: uId,
+  });
+
+  const totalPublishedVideos = await Video.countDocuments({
+    owner: uId,
     isPublished: true,
   });
+  const totalUnPublishedVideos = await Video.countDocuments({
+    owner: uId,
+    isPublished: false,
+  });
+
   const { parsedLimitForPerPage, skip, totalPages } = await pagination(
     page,
     limit,
@@ -243,6 +252,8 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
         allVideosOfAUserAggregateWithPagination,
         totalPages,
         totalVideos,
+        totalPublishedVideos,
+        totalUnPublishedVideos,
       },
       `${allVideosOfAUserAggregateWithPagination.length > 0 ? "Videos of this user fetched successfully ." : "No Video Found !!!"}`
     )
@@ -463,7 +474,7 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 // +++++++++ DELETE VIDEO +++++++++
 const deleteVideo = asyncHandler(async (req, res) => {
-  const { vId } = req.params;
+  const { vId } = req.query;
 
   if (!isValidObjectId(vId)) {
     throw new ApiError(400, "Invalid video Id !");
@@ -494,14 +505,14 @@ const deleteVideo = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, deletedVideoResponse, "Video deleted Successfully ")
+      new ApiResponse(200, deletedVideoResponse, "Video deleted Successfully.")
     );
 });
 
 // ++++++++ VIDEO PUBLISH TOGGLE +++++++
 const togglePublishStatus = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
-  const { vId } = req.params;
+  const { vId } = req.query;
 
   if (!isValidObjectId(vId)) {
     throw new ApiError(400, "Invalid Video Id !");
@@ -539,6 +550,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
+        { isPublished: updatedVideoPublishStatus.isPublished },
         updatedVideoPublishStatus.isPublished
           ? "Video Published "
           : "Video Unpublished"
