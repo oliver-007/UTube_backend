@@ -169,8 +169,12 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 // ++++++++++ GET ALL VIDEOS OF A SPECIFIC USER ++++++++
 const getAllVideosOfAUser = asyncHandler(async (req, res) => {
-  const { uId, page, limit } = req.query; // here 'limit' porps is inActive, but keep this props for future modification, which'll come from frontend.
+  const { uId, page, limit, signedInUserId } = req.query; // here 'limit' porps is inActive, but keep this props for future modification, which'll come from frontend.
 
+  // console.log(
+  //   "signedInUserId from videoController: lineNo : 175 ",
+  //   signedInUserId
+  // );
   // console.log("uid -=-=-=- ", uId);
   // console.log("page -=-=-=- ", page);
   // console.log("limit -=-=-=- ", limit);
@@ -205,11 +209,18 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
   );
 
   const allVideosOfAUserAggregateWithPagination = await Video.aggregate([
-    {
-      $match: {
-        owner: new mongoose.Types.ObjectId(uId),
-      },
-    },
+    new mongoose.Types.ObjectId(uId)?.equals(signedInUserId)
+      ? {
+          $match: {
+            owner: new mongoose.Types.ObjectId(signedInUserId),
+          },
+        }
+      : {
+          $match: {
+            owner: new mongoose.Types.ObjectId(uId),
+            isPublished: true,
+          },
+        },
     {
       $lookup: {
         from: "users",
@@ -255,7 +266,7 @@ const getAllVideosOfAUser = asyncHandler(async (req, res) => {
         totalPublishedVideos,
         totalUnPublishedVideos,
       },
-      `${allVideosOfAUserAggregateWithPagination.length > 0 ? "Videos of this user fetched successfully ." : "No Video Found !!!"}`
+      `${allVideosOfAUserAggregateWithPagination.length > 0 ? `Videos of ${new mongoose.Types.ObjectId(uId).equals(signedInUserId) ? "Your channel" : "this channel"} fetched successfully` : "No Video Found !!!"}`
     )
   );
 });

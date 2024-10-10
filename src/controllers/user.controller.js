@@ -689,7 +689,11 @@ const removeVIdFromWatchHistory = asyncHandler(async (req, res) => {
   //   currentUser
   // );
 
-  if (currentUser.watchHistory.includes(vId)) {
+  const videoExistInWatchHistoryList = currentUser.watchHistory.includes(vId);
+
+  let removalState;
+
+  if (videoExistInWatchHistoryList) {
     await User.findByIdAndUpdate(
       currentUserId,
       {
@@ -699,17 +703,23 @@ const removeVIdFromWatchHistory = asyncHandler(async (req, res) => {
       },
       { new: true }
     );
+    removalState = { isRemoved: true };
+  } else {
+    removalState = { isRemoved: false };
   }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { isRemoved: true },
-        "Video removed form watch-history successfully."
-      )
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      removalState,
+
+      !videoExistInWatchHistoryList
+        ? "Video not found in your watch-history !"
+        : removalState.isRemoved
+          ? "Video removed form watch-history successfully."
+          : "Failed to remove video from watch-history ! "
+    )
+  );
 });
 
 export {
