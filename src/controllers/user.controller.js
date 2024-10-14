@@ -140,13 +140,6 @@ const registerUser = asyncHandler(async (req, res) => {
 
 // =-=-=-=-=-=-=- LOG IN  =-=-=--=-=-=-=-=
 const loginUser = asyncHandler(async (req, res) => {
-  // payload from req.body
-  // email or userbase login
-  // find user
-  // password check
-  // access and refresh token
-  // send cookie
-
   // USER PAYLOAD
   const { email, username, password } = req.body;
   // console.log("email -", email);
@@ -187,6 +180,7 @@ const loginUser = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: true, // for https
     // secure: false, // for http. development phase
+    sameSite: "None",
   };
 
   return res
