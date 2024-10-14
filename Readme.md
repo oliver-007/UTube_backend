@@ -53,6 +53,7 @@ The app will be running on http://localhost:8000.
 - Redux Toolkit with RTK Query
 - Tailwind CSS
 - TypeScript
+- React-Hook-Form
 - Node.js (Backend)
 - Express
 - MongoDB
