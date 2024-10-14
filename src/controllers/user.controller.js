@@ -180,7 +180,7 @@ const loginUser = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: true, // for https
     // secure: false, // for http. development phase
-    sameSite: "None",
+    sameSite: "None", // To allow cookies across different domains (if backend and frontend are on different domains). For same domain- smaeSite: "Lax" (default)
   };
 
   return res
